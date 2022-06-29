@@ -1,0 +1,28 @@
+<!-- <div class="container" style="background-color: chartreuse"> -->
+  <div class="row m-0">
+    <!-- metto margine 0 alla row per togliere quello che ha di default per controbilanciare il conainer -->
+
+    <div class="col-4 bg-dark">
+      <div [ngStyle]="{'height': getSidebarHeight()}">
+        <form [formGroup]="editGraphForm" novalidate class="mx-3">
+          <h3 class="py-4 text-white">Graph details</h3>
+
+        <div class="form-floating">
+          <input type="text" class="my-2 form-control" id="graphNameInput" placeholder="Graph name" formControlName="graph_name" (input)="checkGraphName()">
+          <label for="graphNameInput">graph name</label>
+          <p class="text-danger text-start" *ngIf="!editGraphForm.controls['graph_name'].valid">graph name required</p>
+          <p class="text-danger text-start" *ngIf="graphNameAlready">graph name already taken</p>
+        </div>
+
+        <div class="form-floating">
+          <textarea class="h-25 my-2 form-control" id="graphDescriptionInput" placeholder="Graph description" formControlName="graph_desc"></textarea>
+          <label for="graphDescriptionInput">Graph description</label>
+        </div>
+
+        <button class="w-50 mt-5 btn btn-lg btn-success" [ngClass]="{'disabled': !editGraphForm.controls['graph_name'].valid || graphSearching|| graphNameAlready}" type="button" (click)="tryCreate()">Create</button>
+        </form>
+      </div>
+    </div>
+
+  </div>
+<!-- </div> -->

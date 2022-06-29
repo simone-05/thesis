@@ -1,0 +1,129 @@
+<div [ngStyle]="{'height': getContentHeight()}">
+  <ngx-graph class="chart-container" [update$]="update$" [nodes]="nodes" [links]="edges" [clusters]="clusters" [layout]="layout">
+
+    <ng-template #nodeTemplate let-node>
+      <svg xmlns="http://www.w3.org/2000/svg" (mouseenter)="moreNodeDetails(node.id)"
+        (mouseleave)="moreNodeDetails(0)">
+        <g *ngIf="node.type=='task'">
+          <g *ngIf="showNodeDetails == node.id">
+            <!-- dettagli -->
+            <g *ngFor="let prop of node.properties; let i=index">
+              <rect x="0" [attr.y]="(i==0)? 40: 30+((i+1)*30)" width="100" [attr.height]="(i==0)? 70:50" rx="10"
+                fill="#a22">
+              </rect>
+              <text x="10" [attr.y]="40+((i+1)*35)" font-size="16" fill="#fff">{{prop.name}}: {{prop.value}}</text>
+            </g>
+          </g>
+
+          <!-- tasks -> red -->
+          <rect x="0" y="10" width="100" height="50" rx="10" fill="#a22"></rect>
+          <rect x="0" y="0" width="100" height="30" rx="10" fill="#811"></rect>
+          <text x="20" y="20" font-size="16" fill="#fff">{{node.id}}</text>
+          <!-- <text x="10" y="50" font-size="16" fill="#fff">{{node.label}}</text> -->
+          <text x="10" y="50" font-size="16" fill="#fff">props: {{(Object.entries(node.properties)).length}}</text>
+        </g>
+
+        <g *ngIf="node.type=='cond'">
+          <!-- conditions -> blue -->
+          <circle cx="30" cy="25" [attr.width]="1000" r="25" fill="#118" />
+          <text x="16" y="30" font-size="14" fill="#fff">AND</text>
+
+          <g *ngIf="showNodeDetails == node.id">
+            <!-- dettagli -->
+            <g *ngFor="let prop of node.properties; let i=index">
+              <rect x="0" [attr.y]="(i==0)? 60: 50+((i+1)*30)" width="100" [attr.height]="(i==0)? 70:50" rx="10"
+              fill="#118">
+              </rect>
+              <text x="10" [attr.y]="60+((i+1)*35)" font-size="16" fill="#fff">{{prop.name}}: {{prop.value}}</text>
+            </g>
+            <!-- <text x="60" y="30" font-size="16" fill="#000" >ID: {{node.id}}</text> -->
+          </g>
+        </g>
+
+        <g *ngIf="node.type=='clus'">
+          <!-- nodi di confine cluster -> grigi -->
+          <circle cx="22" cy="17" [attr.width]="1000" r="17" fill="#ccc" />
+          <text x="11" y="23" font-size="14" fill="#000"> {{(node.id.split('_')[0]=='cin')? 'IN':'OUT'}} </text>
+        </g>
+
+        <g *ngIf="node.type != 'task' && node.type != 'cond' && node.type != 'clus'">
+          <g *ngIf="showNodeDetails == node.id">
+            <!-- dettagli -->
+            <!-- <g *ngFor="let prop of node.properties; let i=index">
+              <rect x="0" [attr.y]="(i==0)? 40: 30+((i+1)*30)" width="100" [attr.height]="(i==0)? 70:50" rx="10"
+                fill="#393">
+              </rect>
+              <text x="10" [attr.y]="40+((i+1)*35)" font-size="16" fill="#fff">{{prop.name}}: {{prop.value}}</text>
+            </g> -->
+              <rect x="0" [attr.y]="40" width="100" [attr.height]="70" rx="10"
+                fill="#393">
+              </rect>
+              <text x="10" [attr.y]="40+(1*35)" font-size="16" fill="#fff">input: {{node.input}}</text>
+              <rect x="0" [attr.y]="30+(2*30)" width="100" [attr.height]="50" rx="10"
+                fill="#393">
+              </rect>
+              <text x="10" [attr.y]="40+(2*35)" font-size="16" fill="#fff">content: {{node.content}}</text>
+              <rect x="0" [attr.y]="30+(3*30)" width="100" [attr.height]="50" rx="10"
+                fill="#393">
+              </rect>
+              <text x="10" [attr.y]="40+(3*35)" font-size="16" fill="#fff">output: {{node.output}}</text>
+          </g>
+
+          <g *ngIf="node.type == 'inject'" (click)="injection(nodes, node.id)">
+            <rect x="90" y="10" width="35" height="40" rx="10" fill="#223"></rect>
+            <rect x="92" y="16.5" width="25" height="25" rx="5" fill="#223"></rect>
+          </g>
+
+          <rect x="0" y="10" width="100" height="50" rx="10" fill="#393"></rect>
+          <rect x="0" y="0" width="100" height="30" rx="10" fill="#171"></rect>
+          <text x="20" y="20" font-size="16" fill="#fff">{{node.id}}</text>
+          <text x="70" y="20" font-size="16" fill="#fff">{{String(node.type).substr(0,3)}}</text>
+          <!-- <text x="10" y="50" font-size="16" fill="#fff">{{node.label}}</text> -->
+          <text x="10" y="50" font-size="16" fill="#fff">props: {{(Object.entries(node.properties)).length}}</text>
+        </g>
+
+
+      </svg>
+    </ng-template>
+
+
+    <ng-template #linkTemplate let-link>
+      <svg:g class="edge" (mouseenter)="moreEdgeDetails(link.id)"
+        (mouseleave)="moreEdgeDetails(0)">
+        <svg:circle width="15" height="15" fill="#000"></svg:circle>
+        <svg:path class="line"
+          [ngClass]="{'edge-success': this.checkConditions(link)==2, 'edge-insuccess': this.checkConditions(link)==1}"
+          stroke-width="5" marker-end="url(#arrow)"></svg:path>
+        <svg:text *ngIf="showEdgeDetails == link.id" class="edge-label" text-anchor="middle">
+          <textPath class="text-path" [attr.href]="'#' + link.id" [style.dominant-baseline]="link.dominantBaseline"
+            style="font-size: 20px;" startOffset="50%">
+            {{link.weight}}
+          </textPath>
+        </svg:text>
+      </svg:g>
+    </ng-template>
+
+    <ng-template #defsTemplate>
+      <svg:marker id="arrow" viewBox="0 -5 10 10" refX="8" refY="0" markerWidth="4" markerHeight="4" orient="auto">
+        <svg:path d="M0,-5L10,0L0,5" class="arrow-head" />
+      </svg:marker>
+    </ng-template>
+
+    <ng-template #clusterTemplate let-cluster>
+      <svg:g class="node cluster" (mouseenter)="moreClusterDetails(cluster.id)" (mouseleave)="moreClusterDetails(0)">
+        <svg:rect x="10" y="10" rx="5" ry="5" [attr.width]="cluster.dimension.width" [attr.height]="cluster.dimension.height" stroke="#000" stroke-width="5" fill="#0005"/>
+        <text x="20" y="30" font-size="16" fill="#000">OR</text>
+        <g *ngIf="showClusterDetails == cluster.id">
+          <!-- <text x="110" y="130" font-size="16" fill="#000">ID: {{cluster.id}}</text> -->
+        </g>
+      </svg:g>
+    </ng-template>
+    <!-- height (..)-180 -->
+
+  </ngx-graph>
+
+  <!-- <foreignObject>
+    <xhtml:span class="tooltip-node">
+    </html:span>
+  </foreignObject> -->
+</div>

@@ -1,0 +1,13 @@
+<!-- <div class="container m-0"> -->
+  <div class="row m-0">
+
+    <div class="col-4 bg-dark">
+      <app-sidebar-edit (updateGraphView)="switcher($event)" [selectedNode]="selectedNode" [selectedEdge]="selectedEdge" [forcedChange]="sidebar_switch"></app-sidebar-edit>
+    </div>
+
+    <div class="col-8" style="padding: 0;">
+      <app-view-edit [update]="graph_switch" (selectedEdge)="edgeIsSelected($event)" (selectedNode)="nodeIsSelected($event)"></app-view-edit>
+    </div>
+
+  </div>
+<!-- </div> -->

@@ -1,0 +1,249 @@
+<div class="row mx-3" [ngStyle]="{'height': getSidebarHeight()}">
+  <div class="col-12">
+
+    <div class="d-flex align-items-center">
+      <h3 class="ms-1 my-3 text-white" style="overflow-x: auto;">{{graphEditingService.graph.name}}</h3>
+        <button class="btn btn-sm align-self-center btn-danger ms-auto" (click)="start_over()" title="Delete all nodes and edges">Start over</button>
+    </div>
+
+      <div class="col-12 d-flex align-items-center">
+        <h5 class="my-grey mt-2">Create:</h5>
+        <select name="graph_elements" (change)="changedView($any($event.target).value)" class="form-select my-bg-grey ms-5" [value]="view">
+          <option value="graph">Graph</option>
+          <option selected value="node_task">Node task</option>
+          <option value="node_cond">Node condition</option>
+          <option value="edge">Edge</option>
+          <optgroup label="Flow Nodes">
+            <option value="node_inject">Node Inject</option>
+            <option value="node_debug">Node Debug</option>
+            <option value="node_foo">Node Foo</option>
+          </optgroup>
+        </select>
+      </div>
+
+    <div class="d-flex-column my-grey mt-4">
+      <div *ngIf="view=='graph'">
+        <form [formGroup]="editGraphForm" novalidate class="d-flex-column">
+          <input type="text" class="form-control my-2" formControlName="graph_name" placeholder="graph name" (input)="checkGraphName()" [ngClass]="{'is-invalid': !editGraphForm.controls['graph_name'].valid}">
+          <p class="text-danger text-start my-0" *ngIf="graphNameAlready">Graph name already taken</p>
+          <textarea type="text" class="form-control my-2" formControlName="graph_desc" placeholder="graph description"></textarea>
+
+          <button class="mt-2 w-50 btn btn-primary"
+            [ngClass]="{'disabled': !editGraphForm.controls['graph_name'].valid}"
+            type="button" (click)="editGraph()">Save</button>
+        </form>
+      </div>
+
+        <div *ngIf="view == 'node_task'">
+          <form class="d-flex-column" [formGroup]="nodeForm" novalidate>
+            <input class="form-control my-2 " type="text" formControlName="node_id" placeholder="node id"
+              [ngClass]="{'is-invalid': !nodeForm.controls['node_id'].valid}" [readonly]="nodeEditing">
+            <p class="text-danger text-start my-0" *ngIf="nodeForm.controls['node_id'].errors">
+              {{nodeForm.controls['node_id'].errors?.['msg']}}</p>
+            <input class="form-control my-2 " type="text" formControlName="node_label" placeholder="node label">
+
+            <div class="accordion text-dark">
+              <div class="accordion-item">
+                <div class="accordion-header px-3 btn col-12 d-flex align-items-center" (click)="collapse.toggle()"
+                  [attr.aria-expanded]="!isCollapsed">
+                  Data
+                  <button class="ms-auto bg-white" style="border-width: 0">
+                    <img *ngIf="isCollapsed" src="../../../../../../assets/images/chevron-down.svg" alt="expand">
+                    <img *ngIf="!isCollapsed" src="../../../../../../assets/images/chevron-up.svg" alt="collapse">
+                  </button>
+                </div>
+                <div #collapse="ngbCollapse" [(ngbCollapse)]="isCollapsed">
+                  <div formArrayName="node_data">
+                    <div class="row pb-2 px-4 align-items-center" *ngFor="let item of nodeDataForm.controls; let i=index"
+                      [formGroupName]="i">
+                      <div class="col-5 p-0 ps-2 pe-1" style="overflow-x: auto">
+                        <!-- {{item.value.name}} -->
+                        <input type="text" class="form-control" formControlName="name" placeholder="name"
+                          [ngClass]="{'is-invalid': !nodeForm.get('node_data.'+i+'.name')?.valid}">
+                      </div>
+                      <div class="col-5 p-0 px-1 ps-2" style="overflow-x: auto">
+                        <input type="text" class="form-control" formControlName="value" placeholder="value"
+                          [ngClass]="{'is-invalid': !nodeForm.get('node_data.'+i+'.value')?.valid}">
+                      </div>
+                      <div class="col-2 p-1 pt-1 btn btn-danger" *ngIf="item" (click)="removeNodeDataField(i)">
+                        <img src="../../../../../../assets/images/x-white.svg" alt="delete node property" width="24">
+                      </div>
+                      <small class="text-danger text-start my-0"
+                        *ngIf="!nodeForm.get('node_data.'+i+'.name')?.valid">{{nodeForm.get('node_data.'+i+'.name')?.errors?.['msg']}}</small>
+                      <!-- <div class="col-2 p-1 pt-1 btn btn-warning" *ngIf="item.name" (click)="editNodeDataField(item.name)">
+                                <img src="../../../../../../assets/images/plus-white.svg" width="24" alt="add node property">
+                              </div> -->
+                    </div>
+                  </div>
+                  <div *ngIf="nodeForm.controls['node_data'].value.length == 0" class="row px-4 pb-2 text-center">
+                    <p class="m-0" style="color: #666">no properties</p>
+                  </div>
+                  <!-- form per aggiunta proprieta -->
+                  <div class="col-12 ps-3 pb-3 btn d-flex align-items-center" (click)="this.addNodeDataField()">
+                    <img src="../../../../../../assets/images/plus-dark.svg" alt="add data field">
+                    <p class="m-0 ms-1" style="color: #666">Add data field</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="d-flex">
+              <button class="mt-2 btn btn-primary"
+                [ngClass]="{'disabled': !nodeForm.valid || !nodeForm.get('node_data')?.valid, 'btn-warning': nodeEditing}"
+                type="button" (click)="tryNode()" [innerText]="nodeEditing? 'Edit':'Add'">Add</button>
+              <button class="ms-3 mt-2 btn btn-danger" *ngIf="nodeEditing" (click)="deleteNode()">Delete</button>
+              <button class="ms-auto mt-2 btn btn-secondary" (click)="clearNodeInput()">Clear</button>
+            </div>
+          </form>
+        </div>
+
+        <div *ngIf="view == 'node_cond'">
+          <form class="d-flex-column" [formGroup]="condForm" novalidate>
+            <select class="form-select my-bg-grey my-2" formControlName="cond_source"
+              [ngClass]="{'is-invalid': !condForm.controls['cond_source'].valid}" [attr.disabled]="nodeEditing? true:null">
+              <!-- <optgroup>
+                        <option class="my-0" *ngIf="item.type=='task'" [value]="item.id">{{item.id}}</option>
+                      </optgroup> -->
+              <option [ngValue]="null">No input node</option>
+              <!-- <option value="">null</option> -->
+              <option *ngFor="let item of this.graphEditingService.getNodes()" [value]="item.id">
+                <p>{{item.id}}</p>
+              </option>
+            </select>
+            <!-- <input class="form-control my-2" type="text" formControlName="cond_source" placeholder="node source" [ngClass]="{'is-invalid': !condForm.controls['cond_source'].valid}" [readonly]="nodeEditing"> -->
+            <p *ngIf="condForm.controls['cond_source'].errors?.['notFound']" class="text-danger text-start mt-1">source node
+              doesn't exist</p>
+            <!-- <input class="form-control my-2" type="text" formControlName="cond_target" placeholder="node target" [ngClass]="{'is-invalid': !condForm.controls['cond_target'].valid}" [readonly]="nodeEditing"> -->
+            <select class="form-select my-bg-grey my-2" formControlName="cond_target"
+              [ngClass]="{'is-invalid': !condForm.controls['cond_target'].valid}" [attr.disabled]="nodeEditing? true:null">
+              <option *ngFor="let item of this.graphEditingService.getNodes()" [value]="item.id">
+                <p>{{item.id}}</p>
+              </option>
+            </select>
+            <p *ngIf="condForm.controls['cond_target'].errors?.['notFound']" class="text-danger text-start mt-1">target node
+              doesn't exist</p>
+            <p *ngIf="condForm.errors?.['loop']" class="text-danger text-start mt-1">{{condForm.errors?.['msg']}}</p>
+            <p *ngIf="condForm.errors?.['edgeNotFound']" class="text-danger text-start mt-1">{{condForm.errors?.['msg']}}</p>
+            <input class="form-control my-2" type="text" formControlName="cond_label" placeholder="cond node label">
+
+
+            <div class="accordion text-dark">
+              <div class="accordion-item">
+                <div class="accordion-header px-3 btn col-12 d-flex align-items-center" (click)="collapse.toggle()"
+                  [attr.aria-expanded]="!isCollapsed">
+                  Data
+                  <button class="ms-auto bg-white" style="border-width: 0">
+                    <img *ngIf="isCollapsed" src="../../../../../../assets/images/chevron-down.svg" alt="expand">
+                    <img *ngIf="!isCollapsed" src="../../../../../../assets/images/chevron-up.svg" alt="collapse">
+                  </button>
+                </div>
+                <div #collapse="ngbCollapse" [(ngbCollapse)]="isCollapsed">
+                  <div formArrayName="cond_data">
+                    <div class="row pb-2 px-4 align-items-center" *ngFor="let item of condDataForm.controls; let i=index"
+                      [formGroupName]="i">
+                      <div class="col-5 p-0 ps-2 pe-1" style="overflow-x: auto">
+                        <!-- {{item.value.name}} -->
+                        <input type="text" class="form-control" formControlName="name" placeholder="name"
+                          [ngClass]="{'is-invalid': !condForm.get('cond_data.'+i+'.name')?.valid}">
+                      </div>
+                      <div class="col-5 p-0 px-1 ps-2" style="overflow-x: auto">
+                        <input type="text" class="form-control" formControlName="value" placeholder="value"
+                          [ngClass]="{'is-invalid': !condForm.get('cond_data.'+i+'.value')?.valid}">
+                      </div>
+                      <div class="col-2 p-1 pt-1 btn btn-danger" *ngIf="item" (click)="removeCondDataField(i)">
+                        <img src="../../../../../../assets/images/x-white.svg" alt="delete node property" width="24">
+                      </div>
+                      <small class="text-danger text-start my-0"
+                        *ngIf="!condForm.get('cond_data.'+i+'.name')?.valid">{{condForm.get('cond_data.'+i+'.name')?.errors?.['msg']}}</small>
+                    </div>
+                  </div>
+                  <div *ngIf="condForm.controls['cond_data'].value.length == 0" class="row px-4 pb-2 text-center">
+                    <p class="m-0" style="color: #666">no properties</p>
+                  </div>
+                  <div class="col-12 ps-3 pb-3 btn d-flex align-items-center" (click)="this.addCondDataField()">
+                    <img src="../../../../../../assets/images/plus-dark.svg" alt="add data field">
+                    <p class="m-0 ms-1" style="color: #666">Add data field</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <small class="text-danger text-start"
+              *ngIf="!condForm.controls['cond_data'].valid">{{condForm.controls['cond_data'].errors?.['msg']}}</small>
+
+            <div class="d-flex">
+              <button class="mt-2 btn btn-primary"
+                [ngClass]="{'disabled': !condForm.controls['cond_data'].valid || !condForm.controls['cond_target'].valid, 'btn-warning': nodeEditing}"
+                type="button" (click)="tryCond()" [innerText]="nodeEditing? 'Edit':'Add'">Add</button>
+              <button class="ms-3 mt-2 btn btn-danger" *ngIf="nodeEditing" (click)="deleteCond()">Delete</button>
+              <button class="ms-auto mt-2 btn btn-secondary" (click)="clearCondInput()">Clear</button>
+            </div>
+          </form>
+        </div>
+
+        <div *ngIf="view == 'edge'">
+          <form [formGroup]="edgeForm" novalidate class="d-flex-column">
+            <select class="form-select my-bg-grey my-2" formControlName="edge_source"
+              [ngClass]="{'is-invalid': !edgeForm.controls['edge_source'].valid}" [attr.disabled]="edgeEditing?true:null">
+              <option *ngFor="let item of this.graphEditingService.getNodes()" [value]="item.id">
+                <p>{{item.id}}</p>
+              </option>
+            </select>
+            <p *ngIf="edgeForm.controls['edge_source'].errors?.['notFound']" class="text-danger text-start mt-1">source node
+              doesn't exist</p>
+            <!-- <input class="form-control my-2" type="text" formControlName="edge_target" placeholder="edge target" [ngClass]="{'is-invalid': !edgeForm.controls['edge_target'].valid}" [readonly]="edgeEditing"> -->
+            <select class="form-select my-bg-grey my-2" formControlName="edge_target"
+              [ngClass]="{'is-invalid': !edgeForm.controls['edge_target'].valid}" [attr.disabled]="edgeEditing?true: null">
+              <option *ngFor="let item of this.graphEditingService.getNodes()" [value]="item.id">
+                <p>{{item.id}}</p>
+              </option>
+            </select>
+            <p *ngIf="edgeForm.controls['edge_target'].errors?.['notFound']" class="text-danger text-start mt-1">target node
+              doesn't exist</p>
+            <p *ngIf="edgeForm.controls['edge_target'].errors?.['already2cond'] && !edgeForm.errors?.['cond2cond']"
+              class="text-danger text-start mt-1">{{edgeForm.controls['edge_target'].errors?.['msg']}}</p>
+            <p *ngIf="edgeForm.errors?.['already']" class="text-danger text-start mt-1">{{edgeForm.errors?.['msg']}}</p>
+            <p *ngIf="edgeForm.errors?.['loop']" class="text-danger text-start mt-1">{{edgeForm.errors?.['msg']}}</p>
+            <p *ngIf="edgeForm.errors?.['cond2cond']" class="text-danger text-start mt-1">{{edgeForm.errors?.['msg']}}</p>
+            <input class="form-control my-2" type="text" formControlName="edge_label" placeholder="edge label">
+            <div class="row my-2 align-items-center">
+              <p class="m-0 my-grey col-8">Edge weight:</p>
+              <div class="col-4">
+                <input class="form-control" type="number" formControlName="edge_weight" placeholder="edge weight">
+              </div>
+              <p *ngIf="edgeForm.errors?.['weightError']" class="text-danger text-start mt-1">{{edgeForm.errors?.['msg']}}</p>
+            </div>
+
+          <div class="d-flex">
+            <button class="mt-2 btn btn-primary" [ngClass]="{'disabled': !edgeForm.valid, 'btn-warning': edgeEditing}" type="button" (click)="tryEdge()" [innerText]="edgeEditing ? 'Edit':'Add'">Add</button>
+            <button class="ms-3 mt-2 btn btn-danger" *ngIf="edgeEditing" (click)="deleteEdge()">Delete</button>
+            <button class="ms-auto mt-2 btn btn-secondary" (click)="clearEdgeInput()">Clear</button>
+          </div>
+          </form>
+        </div>
+
+        <div *ngIf="view == 'node_inject'">
+          <app-inject-node></app-inject-node>
+        </div>
+
+        <div *ngIf="view == 'node_debug'">
+          <app-debug-node></app-debug-node>
+        </div>
+
+        <div *ngIf="view == 'node_foo'">
+          <app-foo-node></app-foo-node>
+        </div>
+
+      </div>
+
+    </div>
+
+  <div class="mt-auto">
+    <div class="col-12">
+      <button class="btn btn-success w-100" (click)="saveGraph()">Save Graph</button>
+    </div>
+    <div class=" d-flex gap-2 my-3 justify-content-evenly">
+      <button class="btn btn-sm btn-secondary" (click)="centerGraph()">Center graph</button>
+      <button class="btn btn-sm btn-secondary" (click)="fitGraph()">Zoom to fit</button>
+    </div>
+  </div>
+</div>

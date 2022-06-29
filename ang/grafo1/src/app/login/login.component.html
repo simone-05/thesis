@@ -1,0 +1,28 @@
+<body class="bg-dark" style="height:100vh">
+  <div class="container">
+    <div class="row">
+      <div class="col-sm-6 offset-3 text-center">
+          <form [formGroup]="form" novalidate>
+            <h3 class="my-5 my-grey">Log in</h3>
+
+            <div class="form-floating">
+              <input type="text" class="mt-5 form-control" id="usernameInput" placeholder="User name" #username formControlName="username">
+              <label for="usernameInput">Username</label>
+              <p class="text-danger text-start" *ngIf="!form.controls['username'].valid">username required</p>
+            </div>
+
+            <div class="form-floating">
+              <input type="password" class="my-3 form-control" id="passwordInput" placeholder="Password" #password formControlName="password">
+              <label for="passwordInput">Password</label>
+              <p class="text-danger text-start" *ngIf="!form.controls['password'].valid">password required</p>
+            </div>
+
+            <p class="text-danger text-start mt-2" *ngIf="">Wrong combination</p>
+
+            <button class="w-50 mt-5 btn btn-lg btn-primary" [ngClass]="{'disabled': !form.controls['password'].valid || !form.controls['username'].valid}" type="submit" (click)="tryLogin()">Log in</button>
+          </form>
+
+        </div>
+      </div>
+    </div>
+</body>
