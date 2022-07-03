@@ -18,9 +18,14 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.google.gson.Gson;
+
+import gruppo1.grafofuncmanager.Functions.StringsFns;
 import gruppo1.grafofuncmanager.Model.Edge;
 import gruppo1.grafofuncmanager.Model.Flownode;
 import gruppo1.grafofuncmanager.Model.Graph;
+// import net.minidev.json.JSONObject;
+import org.json.JSONObject;
 
 
 @CrossOrigin("http://localhost:4200")
@@ -49,6 +54,11 @@ class GraphController {
 
     private List<Flownode> getOutNodes(Flownode node) {
         List<Flownode> exit_nodes = new ArrayList<>();
+        
+        if (graph == null) {
+            System.out.println("Graph is null");
+        }
+
         try {
             Stream<Flownode> nodes = Stream.of(graph.getNodes());
             Stream<Edge> edges = Stream.of(graph.getEdges());
@@ -57,7 +67,7 @@ class GraphController {
 
             exit_nodes = nodes.filter(n -> exit_node_ids.contains(n.getId())).collect(Collectors.toList());
         } catch (Exception e) {
-            System.out.println("ERRORE: "+e);
+            System.out.println("ERRORE getOutNodes(): "+e);
         }
         return exit_nodes;
     }
@@ -85,7 +95,7 @@ class GraphController {
                 try {
                     next_node.setInput(current_node.getOutput());
                 } catch(Exception e) {
-                    System.out.println("Eccezione, non ci sarà il nodo nel grafo (indice tornato -1): "+e);
+                    System.out.println("Eccezione, probabilmente non c'è il nodo nel grafo (indice tornato -1): "+e);
                 }
                 // if (!visited[graph.getNodeIndex(next_node)]) {
                 //     visited[graph.getNodeIndex(next_node)] = true;
@@ -104,6 +114,9 @@ class GraphController {
             case "inject":
                 node.setOutput(node.getContent());
                 break;
+            case "foo":
+                node.setOutput(fooFunc(node.getInput()));
+                break;
             default:
                 sendResponse("sono un tipo sconosciuto di nodo");
                 node.setOutput(node.getInput());
@@ -115,6 +128,49 @@ class GraphController {
     SimpMessagingTemplate m;
 
     public void sendResponse(String str) {
+        // JSONObject obj = new JSONObject(str);
         this.m.convertAndSend("/topic/debug", str);
+    }
+
+    public String selectField(JSONObject obj, String key) {
+        String value = "";
+
+        try {
+            if (obj == null) {
+                System.out.println("json is null");
+            }
+            if (!obj.has(key)) {
+                System.out.println("json does not contain "+key);
+            } else {
+                value = obj.getString(key);
+            }
+        } catch (Exception e) {
+            System.out.println("ERRORE selectField(): "+e);
+        }
+        
+        return value;
+    }
+
+    public String fooFunc(String input) {
+        String res = "";
+        // Immaginando di avere già il nome del campo su cui vogliamo operare (invece di avelo specificato da user input e messo nel node.content)
+        String node_content = "name";
+        
+        try {
+            // Port l'input in json
+            JSONObject obj = new JSONObject(input);
+
+            // Seleziono il campo
+            String value = selectField(obj, node_content);
+            obj.put(node_content, StringsFns.getInstance().toUpper(value));
+            // Salvo il nuovo json e lo porto a stringa
+            res = obj.toString();
+        } catch (Exception e) {
+            System.out.println("ERRORE fooFunc(): "+e);
+        }
+        
+        StringsFns.getInstance().toUpper(input);
+        
+        return res;
     }
 }

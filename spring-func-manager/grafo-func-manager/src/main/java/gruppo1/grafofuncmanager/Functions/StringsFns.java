@@ -5,15 +5,18 @@ package gruppo1.grafofuncmanager.Functions;
  * Funzioni per operare sulle stringhe di elementi json
  */
 public class StringsFns {
-    private StringsFns instance;
+    private static StringsFns instance;
 
     private StringsFns() {
 
     }
 
-    public StringsFns getInstance() {
-        if (this.instance == null) return new StringsFns();
-        else return this.instance;
+    public static StringsFns getInstance() {
+        if (instance == null) return new StringsFns();
+        else return instance;
     }
 
+    public String toUpper(String str) {
+        return str.toUpperCase();
+    }
 }

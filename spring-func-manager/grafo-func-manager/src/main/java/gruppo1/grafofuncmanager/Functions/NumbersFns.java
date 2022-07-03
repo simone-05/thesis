@@ -4,20 +4,20 @@ package gruppo1.grafofuncmanager.Functions;
  * NumbersFunctions
  * Funzioni per operare su interi e decimali di elementi json
  */
-public class NumbersFns<T> {
-    private NumbersFns<T> instance;
+public class NumbersFns {
+    private static NumbersFns instance;
 
     private NumbersFns() {
 
     }
 
-    public NumbersFns<T> getInstance() {
-        if (this.instance == null) return new NumbersFns<T>();
-        else return this.instance;
+    public static NumbersFns getInstance() {
+        if (instance == null) return new NumbersFns();
+        else return instance;
     }
     
 
-    public T trimDecimals(T x, Integer n) {
+    public Double trimDecimals(Double x, Integer n) {
         //TODO: arrotondamento a max n cifre decimali
         return x;
     }
