@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { AbstractControl, FormBuilder, FormGroup, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { Subject } from 'rxjs/internal/Subject';
-import { DebugNode } from 'src/app/shared/flow_nodes-interface';
+import { FlowNode } from 'src/app/shared/flow_nodes-interface';
 import { SidebarEditComponent } from '../../edit/sidebar-edit/sidebar-edit.component';
 import { Node, GraphEditingService, Graph, Edge } from '../../graph-editing.service';
 
@@ -54,9 +54,7 @@ export class DebugNodeComponent implements OnInit, OnDestroy {
   tryNode() {
     let node_id = this.getControl("node_id").value;
     let node_label = this.getControl("node_label").value || "";
-    let node_type = "debug";
-    let node_properties: any[string] = [];
-    let node: DebugNode = new DebugNode(node_id, node_label, node_properties);
+    let node: FlowNode = new FlowNode(node_id, node_label, "debug", [], "");
     if (this.nodeEditing) {
       this.gs.editNode(node);
     } else {

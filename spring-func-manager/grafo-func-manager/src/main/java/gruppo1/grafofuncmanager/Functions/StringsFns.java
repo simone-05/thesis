@@ -19,4 +19,8 @@ public class StringsFns {
     public String toUpper(String str) {
         return str.toUpperCase();
     }
+
+    public String toLower(String str) {
+        return str.toLowerCase();
+    }
 }

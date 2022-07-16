@@ -3,7 +3,7 @@ import { Component, OnInit, SimpleChanges, OnChanges, Input, EventEmitter, Outpu
 import { Subject, Subscription } from 'rxjs';
 import * as _ from 'lodash';
 import { ClusterNode, DagreClusterLayout } from '@swimlane/ngx-graph';
-import { FlowNode, InjectNode } from 'src/app/shared/flow_nodes-interface';
+import { FlowNode } from 'src/app/shared/flow_nodes-interface';
 import { FuncManagerService } from 'src/app/shared/services/func-manager.service';
 
 @Component({
@@ -11,7 +11,7 @@ import { FuncManagerService } from 'src/app/shared/services/func-manager.service
   templateUrl: './view-edit.component.html',
   styleUrls: ['./view-edit.component.scss']
 })
-export class ViewEditComponent implements OnInit, OnDestroy {
+export class ViewEditComponent implements OnDestroy {
   nodes: Node[] = [
     // {id: "1", label: 'nodo1', type: "cond"},
     // {id: "2", label: 'nodo2', type: "task"}
@@ -32,15 +32,18 @@ export class ViewEditComponent implements OnInit, OnDestroy {
 
   Object = Object;
   String = String;
+  document = document;
 
-  showNodeDetails: number;
-  showEdgeDetails: number;
-  showClusterDetails: number;
+  nodeDetails: string;
+  edgeDetails: string;
+  clusterDetails: string;
+  moreNodeDetails: {'id': string,'type': string, 'data': any};
 
   constructor(public graphEditingService: GraphEditingService, private fm: FuncManagerService) {
-    this.showNodeDetails = 0;
-    this.showEdgeDetails = 0;
-    this.showClusterDetails = 0;
+    this.nodeDetails = "-1";
+    this.edgeDetails = "0";
+    this.clusterDetails = "0";
+    this.moreNodeDetails = {id: '-1', type: '', data: null};
     this.layout = new DagreClusterLayout();
 
     this.graph_subscription = this.graphEditingService.graph$.subscribe((element) => {
@@ -48,22 +51,6 @@ export class ViewEditComponent implements OnInit, OnDestroy {
         this.updateGraph();
       }
     });
-  }
-
-  ngOnInit(): void {
-  }
-
-  ngOnChanges(changes: SimpleChanges): void {
-    switch (this.update) {
-      case 2:
-        this.center$.next(true)
-        break;
-      case 3:
-        this.zoomToFit$.next(true)
-        break;
-      default:
-        break;
-      }
   }
 
   ngOnDestroy() {
@@ -106,16 +93,16 @@ export class ViewEditComponent implements OnInit, OnDestroy {
   }
 
   //id è il numero del nodo se il mouse è sopra, 0 se il mouse esce dal nodo
-  moreNodeDetails(id: number) {
-    this.showNodeDetails = id;
+  setNodeDetails(id: string) {
+    this.nodeDetails = id;
   }
 
-  moreEdgeDetails(id: number) {
-    this.showEdgeDetails = id;
+  setEdgeDetails(id: string) {
+    this.edgeDetails = id;
   }
 
-  moreClusterDetails(id: number) {
-    this.showClusterDetails = id;
+  setClusterDetails(id: string) {
+    this.clusterDetails = id;
   }
 
   checkClusterConditions(cluster: ClusterNode, task_node: Node): boolean {
@@ -194,12 +181,62 @@ export class ViewEditComponent implements OnInit, OnDestroy {
 
   //funzione necessaria, perchè dall'html il nodo non viene visto come oggetto di tipo InjectNode
   injection(nodes: any, id: any) {
-    const node: InjectNode = nodes.filter((node:any) => node.id == id)[0];
+    const node: FlowNode = nodes.filter((node:any) => node.id == id)[0];
     // node.processInput();
     const n = {"id": node.id, "content": node.content, "type": node.type};
     this.fm.send(n);
   }
 
+  /**
+   * Funzione chiamata dall attr.fill nel template del nodo corrispondente, per colorarsi
+   * @param id id del nodo
+   * @param part 'body'|'header' parte del nodo (il rect element)
+   * @returns il colore come variabile es: 'var(--flow-node-body-default)'
+   */
+  fillFunction(id: string, part: "body"|"header"): string {
+    const node: FlowNode = this.graphEditingService.getNode(id) as FlowNode;
+    const status: string = node.color||"default";
+    return "var(--flow-node-"+part+"-"+ status +")";
+  }
+
+  setMoreNodeDetails(id: string, type: "input"|"output"|"content"|'') {
+    const node: FlowNode = this.graphEditingService.getFlowNode(id);
+    let data = null;
+    if (id != "-1" && type) {
+      data = node[type];
+      if (data) { //se il nodo ha il campo input|output|content
+        data = JSON.parse(data);
+        data = JSON.stringify(data, null, 4);
+      }
+    }
+    this.moreNodeDetails = {id, type, data};
+  }
+
+  popoverContent(): string {
+    let popover_element = document.getElementsByTagName("ngb-popover-window").item(0)?.getElementsByClassName("popover-body").item(0);
+    if (!popover_element?.children.namedItem("my_popover_element")) {
+      let my_popover_html = document.createElement("pre");
+      my_popover_html.setAttribute("id", "my_popover_element");
+      my_popover_html.innerText = this.moreNodeDetails.data||'null';
+      popover_element?.appendChild(my_popover_html);
+    }
+    return " "; // Mostra sempre il popover, anche senza contenuto
+
+    /* Per non mostrare il popover se non ha contenuto
+    if (this.moreNodeDetails.data) return " ";
+    else return ""; */
+  }
+
+  /*  Se voglio usare un tooltip anzichè popover
+  tooltipContent() {
+    let tooltip_element = document.getElementsByTagName("ngb-tooltip-window").item(0)?.getElementsByClassName("tooltip-inner").item(0);
+    if (!tooltip_element?.children.namedItem("my_tooltip_element")) {
+      let my_tooltip_element = document.createElement("pre");
+      my_tooltip_element.setAttribute("id", "my_tooltip_element");
+      my_tooltip_element.innerText = this.moreNodeDetails.data;
+      tooltip_element?.appendChild(my_tooltip_element);
+    }
+    if (this.moreNodeDetails.data) return " ";
+    else return "";
+  } */
 }
-
-

@@ -1,3 +1,4 @@
+import { Node } from './../../layout/main/graph/graph-editing.service';
 import { Graph, GraphEditingService } from 'src/app/layout/main/graph/graph-editing.service';
 import { Injectable } from '@angular/core';
 import { HttpClient } from "@angular/common/http"
@@ -6,6 +7,7 @@ import { FlowNode } from '../flow_nodes-interface';
 import * as Stomp from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import { Client, Message } from '@stomp/stompjs';
+import { has } from 'lodash';
 
 
 @Injectable({
@@ -59,9 +61,21 @@ export class FuncManagerService {
     this.client.onConnect = () => {
       this.updateGraph(this.gs.graph).subscribe();
       const subscription = this.client.subscribe('/topic/debug', (data: any) => {
-          data = data.body;
-          console.log(JSON.parse(data));
-          // console.log(data);
+        data = data.body;
+        const msg = JSON.parse(data);
+        if (has(msg, "status")) { //se si tratta di un messaggio che indica solo lo stato di un nodo
+          let node: FlowNode = this.gs.getFlowNode(msg.node_id);
+          if (msg.node_input) {
+            node.input = msg.node_input;
+          }
+          if (msg.node_output) {
+            node.output = msg.node_output;
+          }
+          if (msg.status =="error") this.paintNode(msg.node_id, "error");
+          else this.paintNode(msg.node_id, "success");
+        } else { // Altrimenti si tratta di un messaggio vero e proprio di dati output dal flusso
+          console.log(msg);
+        }
       });
     }
     this.client.onStompError = () => {
@@ -88,7 +102,8 @@ export class FuncManagerService {
     //   {},
     //   JSON.stringify(data)
     // );
-
+    // Reset to il colore dei nodi se sono andati in errore
+    this.gs.graph.nodes.forEach(n => this.paintNode(n.id, "default"));
     try {
       this.client.publish({destination: "/app/injection", body: JSON.stringify(data)});
     } catch (error) {
@@ -96,4 +111,8 @@ export class FuncManagerService {
     }
   }
 
+  paintNode(node_id: string, color: "error"|"default"|"success") {
+    let node: FlowNode = this.gs.getFlowNode(node_id);
+    node.color = color;
+  }
 }

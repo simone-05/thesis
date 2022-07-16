@@ -2,7 +2,7 @@ import { BehaviorSubject, Observable, of } from 'rxjs';
 import { Injectable } from '@angular/core';
 import { ClusterNode, NgxGraphModule } from '@swimlane/ngx-graph';
 import { DatePipe } from '@angular/common';
-import { DebugNode, FlowNode, FooNode, InjectNode } from 'src/app/shared/flow_nodes-interface';
+import { FlowNode } from 'src/app/shared/flow_nodes-interface';
 import { SpringService } from 'src/app/shared/services/spring.service';
 
 @Injectable({
@@ -12,6 +12,7 @@ export class GraphEditingService {
   graph: Graph = {date: "", name: "", description: "", nodes: [], edges: [], clusters: []};
   graph$: BehaviorSubject<Graph|any> = new BehaviorSubject<Graph|any>("graph$ creation");
   loaded$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
+  nonflow_types: string[] = ["task", "cond", "clus"];
 
   constructor(private datePipe: DatePipe, private spring: SpringService) { }
 
@@ -31,13 +32,14 @@ export class GraphEditingService {
     this.spring.get(graph_id).subscribe(graph => {
       graph.nodes.forEach((node: any) => {
         const i = graph.nodes.indexOf(node);
-        if (node && node.type) {
-          switch (node.type) {
-            case "inject": node = new InjectNode(node.id, node.label, node.properties, node.content/*, this*/); break;//this è l'istanza di graphEditingService
-            case "debug": node = new DebugNode(node.id, node.label, node.properties); break;
-            case "foo": node = new FooNode(node.id, node.label, node.properties/*, this*/); break;
-            default: break;
-          }
+        if (node && !this.nonflow_types.includes(node.type)) {
+          // switch (node.type) {
+          //   case "inject": node = new InjectNode(node.id, node.label, node.properties, node.content/*, this*/); break;//this è l'istanza di graphEditingService
+          //   case "debug": node = new DebugNode(node.id, node.label, node.properties); break;
+          //   default: break;
+          // }
+          let n = new FlowNode(node.id, node.label, node.type, node.properties, node.content);
+          node = n;
         }
         graph.nodes[i] = node;
       });
@@ -201,6 +203,10 @@ export class GraphEditingService {
     return this.graph.nodes.find(nodo => nodo.id == id);
   }
 
+  getFlowNode(id: string): FlowNode {
+    return this.graph.nodes.find((nodo) => nodo.id == id) as FlowNode;
+  }
+
   getEdge(id: string): Edge|undefined {
     return this.graph.edges.find(arco => arco.id == id);
   }
@@ -217,6 +223,10 @@ export class GraphEditingService {
   //Nodi task, inject, ... (non condizione)
   getNodes(): any[] {
     return this.graph.nodes.filter(node => node.type != "cond" && node.type != "clus")||[];
+  }
+
+  getFlowNodes(): FlowNode[] {
+    return this.graph.nodes.filter(node => node.type != "cond" && node.type != "clus" && node.type != "task") as FlowNode[];
   }
 
   getOutNodes(id: string) {

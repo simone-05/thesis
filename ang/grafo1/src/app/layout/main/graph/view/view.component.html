@@ -3,21 +3,21 @@
 
     <ng-template #nodeTemplate let-node>
       <svg xmlns="http://www.w3.org/2000/svg" (mouseenter)="moreNodeDetails(node.id)"
-        (mouseleave)="moreNodeDetails(0)">
+        (mouseleave)="moreNodeDetails(-1)">
         <g *ngIf="node.type=='task'">
           <g *ngIf="showNodeDetails == node.id">
             <!-- dettagli -->
             <g *ngFor="let prop of node.properties; let i=index">
               <rect x="0" [attr.y]="(i==0)? 40: 30+((i+1)*30)" width="100" [attr.height]="(i==0)? 70:50" rx="10"
-                fill="#a22">
+                fill="var(--task-node-body-color)">
               </rect>
               <text x="10" [attr.y]="40+((i+1)*35)" font-size="16" fill="#fff">{{prop.name}}: {{prop.value}}</text>
             </g>
           </g>
 
           <!-- tasks -> red -->
-          <rect x="0" y="10" width="100" height="50" rx="10" fill="#a22"></rect>
-          <rect x="0" y="0" width="100" height="30" rx="10" fill="#811"></rect>
+          <rect x="0" y="10" width="100" height="50" rx="10" fill="var(--task-node-body-color)"></rect>
+          <rect x="0" y="0" width="100" height="30" rx="10" fill="var(--task-node-body-color)"></rect>
           <text x="20" y="20" font-size="16" fill="#fff">{{node.id}}</text>
           <!-- <text x="10" y="50" font-size="16" fill="#fff">{{node.label}}</text> -->
           <text x="10" y="50" font-size="16" fill="#fff">props: {{(Object.entries(node.properties)).length}}</text>
@@ -25,14 +25,14 @@
 
         <g *ngIf="node.type=='cond'">
           <!-- conditions -> blue -->
-          <circle cx="30" cy="25" [attr.width]="1000" r="25" fill="#118" />
+          <circle cx="30" cy="25" [attr.width]="1000" r="25" fill="var(--cond-node-body-color)" />
           <text x="16" y="30" font-size="14" fill="#fff">AND</text>
 
           <g *ngIf="showNodeDetails == node.id">
             <!-- dettagli -->
             <g *ngFor="let prop of node.properties; let i=index">
               <rect x="0" [attr.y]="(i==0)? 60: 50+((i+1)*30)" width="100" [attr.height]="(i==0)? 70:50" rx="10"
-              fill="#118">
+              fill="var(--cond-node-body-color)">
               </rect>
               <text x="10" [attr.y]="60+((i+1)*35)" font-size="16" fill="#fff">{{prop.name}}: {{prop.value}}</text>
             </g>
@@ -51,20 +51,22 @@
             <!-- dettagli -->
             <!-- <g *ngFor="let prop of node.properties; let i=index">
               <rect x="0" [attr.y]="(i==0)? 40: 30+((i+1)*30)" width="100" [attr.height]="(i==0)? 70:50" rx="10"
-                fill="#393">
+                fill="var(--flow-node-body-color)">
               </rect>
               <text x="10" [attr.y]="40+((i+1)*35)" font-size="16" fill="#fff">{{prop.name}}: {{prop.value}}</text>
             </g> -->
               <rect x="0" [attr.y]="40" width="100" [attr.height]="70" rx="10"
-                fill="#393">
+                fill="var(--flow-node-body-color)">
               </rect>
-              <text x="10" [attr.y]="40+(1*35)" font-size="16" fill="#fff">input: {{node.input}}</text>
+              <text x="10" [attr.y]="40+(1*35)+5" font-size="16" fill="#fff">input: {{node.input}}</text>
+
               <rect x="0" [attr.y]="30+(2*30)" width="100" [attr.height]="50" rx="10"
-                fill="#393">
+                fill="var(--flow-node-body-color)">
               </rect>
               <text x="10" [attr.y]="40+(2*35)" font-size="16" fill="#fff">content: {{node.content}}</text>
+
               <rect x="0" [attr.y]="30+(3*30)" width="100" [attr.height]="50" rx="10"
-                fill="#393">
+                fill="var(--flow-node-body-color)">
               </rect>
               <text x="10" [attr.y]="40+(3*35)" font-size="16" fill="#fff">output: {{node.output}}</text>
           </g>
@@ -74,8 +76,8 @@
             <rect x="92" y="16.5" width="25" height="25" rx="5" fill="#223"></rect>
           </g>
 
-          <rect x="0" y="10" width="100" height="50" rx="10" fill="#393"></rect>
-          <rect x="0" y="0" width="100" height="30" rx="10" fill="#171"></rect>
+          <rect x="0" y="10" width="100" height="50" rx="10" fill="var(--flow-node-body-color)"></rect>
+          <rect x="0" y="0" width="100" height="30" rx="10" fill="var(--flow-node-header-color)"></rect>
           <text x="20" y="20" font-size="16" fill="#fff">{{node.id}}</text>
           <text x="70" y="20" font-size="16" fill="#fff">{{String(node.type).substr(0,3)}}</text>
           <!-- <text x="10" y="50" font-size="16" fill="#fff">{{node.label}}</text> -->

@@ -19,7 +19,7 @@
 
             <p class="text-danger text-start mt-2" *ngIf="">Wrong combination</p>
 
-            <button class="w-50 mt-5 btn btn-lg btn-primary" [ngClass]="{'disabled': !form.controls['password'].valid || !form.controls['username'].valid}" type="submit" (click)="tryLogin()">Log in</button>
+            <button class="w-50 mt-5 btn btn-lg btn-primary" [ngClass]="{'disabled': !form.controls['password'].valid || !form.controls['username'].valid}" type="button" (click)="tryLogin()">Log in</button>
           </form>
 
         </div>

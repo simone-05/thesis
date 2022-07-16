@@ -1,4 +1,15 @@
 /* You can add global styles to this file, and also import other style files */
+/* Le regole custom di override di boostrap devo metterle prima dell'import */
+
+// Qui metto gli override degli stili bootstrap
+$form-floating-padding-y: .6rem; //sposto più in alto il label, dato che riduco l'altezza dell'input
+$form-floating-label-opacity: .8; //anziche .65, così il label anche quando ridotto in alto, rimane ben visibile
+
+@import '~bootstrap/scss/bootstrap';
+
+// Qui (tra i due import) metto gli override degli stili bootstrap che dipendono da altre variabili bootstrap, le quali devo prima importare per poter cambiare quello che mi serve
+
+$form-floating-height: add(2.6rem, $input-height-border); //riduco l'altezza dell'input tag
 
 /* Importing Bootstrap SCSS file. */
 @import '~bootstrap/scss/bootstrap';
@@ -7,6 +18,7 @@
     color: #ccc;
 }
 
+// Per bottoni ----
 .whiten:hover {
   background-color: white;
   color: black;
@@ -16,7 +28,96 @@
   background-color: white;
   color: red;
 }
+//---- fine per bottoni
 
 .my-bg-grey {
   background-color: #f1f1f1;
+}
+
+.node-form-div {
+  display: flex;
+  justify-content: center;
+  hr {
+    margin: 0;
+    width: 200px;
+    height: 2px !important;
+    border-radius: 30px;
+  }
+}
+
+// Per form-floating divs ----
+.form-floating > label {
+  color: #0008;
+}
+
+.form-floating > select {
+  padding-top: 1.2rem !important;
+  padding-bottom: 0.1rem !important;
+  min-height: 40px;
+}
+//---- fine per form-floating divs
+
+// Per il colore degli archi ----
+.edge-success {
+  stroke: #393;
+}
+
+.edge-insuccess {
+  stroke: #a33;
+}
+
+.cluster-success {
+  stroke: #0f0;
+}
+
+.cluster-insuccess {
+  stroke: #f00;
+}
+//---- fine per il colore degli archi
+
+// Colori nodi ----
+:root {
+  --task-node-header-color: #b5690c;
+  --task-node-body-color: #e18719;
+  // --cond-node-header-color: ;
+  --cond-node-body-color: #118;
+  --flow-node-header-default: #666;
+  --flow-node-body-default: #888;
+  --flow-node-header-success: #0a0;
+  --flow-node-body-success: #0b0;
+  --flow-node-header-error: #d00;
+  --flow-node-body-error: #e00;
+}
+//---- fine colori nodi
+
+
+.custom-tooltip .tooltip-inner {
+  margin-left: 1rem;
+  background-color: #fff;
+  color: #000;
+  border: solid .5px #000;
+}
+
+.custom-tooltip.bs-tooltip-end .tooltip-arrow::before {
+  border-right-color: darkgreen;
+}
+
+.custom-tooltip.bs-tooltip-start .tooltip-arrow::before {
+  border-left-color: darkgreen;
+}
+
+.custom-tooltip.bs-tooltip-top .tooltip-arrow::before {
+  border-top-color: darkgreen;
+}
+
+.custom-tooltip.bs-tooltip-bottom .tooltip-arrow::before {
+  border-bottom-color: darkgreen;
+}
+
+.custom-tooltip-node-type .tooltip-inner{
+  margin-bottom: .2rem;
+}
+
+.custom-popover {
+  margin-left: 1rem;
 }

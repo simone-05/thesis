@@ -5,7 +5,6 @@ import { AbstractControl, FormArray, FormBuilder, FormGroup, ValidationErrors, V
 import { Component, OnInit, EventEmitter, Output, Input, OnChanges, SimpleChanges, OnDestroy } from '@angular/core';
 import { ClusterNode } from '@swimlane/ngx-graph';
 import { BehaviorSubject, Subscription } from 'rxjs';
-import { FuncManagerService } from 'src/app/shared/services/func-manager.service';
 
 @Component({
   selector: 'app-sidebar-edit',
@@ -43,7 +42,7 @@ export class SidebarEditComponent implements OnInit, OnChanges, OnDestroy {
   Object = Object;
 
   constructor(public graphEditingService: GraphEditingService, private formBuilder: FormBuilder, private router: Router, private sp: SpringService) {
-    this.view = "node_inject";
+    this.view = "node_debug";
     this.isCollapsed = true;
     this.nodePropId = 0;
     this.edgePropId = 0;
@@ -122,10 +121,28 @@ export class SidebarEditComponent implements OnInit, OnChanges, OnDestroy {
       this.graph_subscription.unsubscribe();
   }
 
+  /**
+   * Calculates the max height of the sidebar (this component)
+   * @returns height in string (with 'px' to the end)
+   */
   getSidebarHeight(): string {
     const header_height: number | undefined = document.getElementsByTagName("app-header")[0].firstElementChild?.clientHeight || 67;
     const viewport_height: number | undefined = window.innerHeight || 290;
     return (viewport_height - header_height).toString() + "px";
+  }
+
+  /**
+   * Calculates the max height of the forms in the sidebar (the total sidebar height minus the bottom buttons (save graph, center, ...))
+   * @returns height in string (with 'px' at the end)
+   */
+  getSidebarFormHeight(): string {
+    const bottom_sidebar_height: number | undefined = document.getElementById("BottomSidebarForm")?.clientHeight;
+    if (bottom_sidebar_height == undefined) {
+      return "auto";
+    } else {
+      // console.log(Number(this.getSidebarFormHeight().split("p")[0]));
+      return (Number(this.getSidebarHeight().split("p")[0]) - bottom_sidebar_height).toString() + "px";
+    }
   }
 
   get graph(): Graph {

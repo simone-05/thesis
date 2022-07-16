@@ -1,3 +1,4 @@
+import { FormGroup, FormBuilder } from '@angular/forms';
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { Graph } from '../graph-editing.service';
@@ -9,12 +10,13 @@ import { SpringService } from 'src/app/shared/services/spring.service';
   templateUrl: './list.component.html',
   styleUrls: ['./list.component.scss']
 })
-export class ListComponent implements OnInit {
+export class ListComponent {
   graph_deletions: {[i: string]: boolean} = {};
   graphs: Graph[] = [];
   loaded: boolean = false;
+  searchForm: FormGroup;
 
-  constructor(private router: Router, private sp: SpringService) {
+  constructor(private router: Router, private sp: SpringService, private fb: FormBuilder) {
     this.makeList();
     // for (let index = 0; index < localStorage.length; index++) {
     //   this.graphs.push(
@@ -25,13 +27,24 @@ export class ListComponent implements OnInit {
     //   );
     //   this.graph_deletions[index+1] = false;
     // }
+    this.searchForm = this.fb.group({
+      input: null,
+    });
   }
 
-  ngOnInit(): void {
+
+  public get search_input(): string {
+    return this.searchForm.controls["input"].value;
   }
 
-  getGraphs() {
+
+  getGraphs(): Graph[] {
     // return this.Graphs.graph$.getValue();
+    if (this.search_input) { // Se stiamo cercando
+      const by_names = this.graphs.filter(x => x.name.includes(this.search_input));
+      const by_description = this.graphs.filter(x => x.description.includes(this.search_input));
+      return by_names.concat(by_description);
+    }
     return this.graphs;
   }
 
@@ -67,6 +80,14 @@ export class ListComponent implements OnInit {
     }
   }
 
+  getSearchBoxWidth(): string {
+    let width: number|undefined = document.getElementById("search-box")?.clientWidth;
+    if (width== undefined) {
+      return "200px";
+    } else {
+      return (width - 50).toString() + "px";
+    }
+  }
 }
 
 interface _Graph {

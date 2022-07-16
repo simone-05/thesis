@@ -1,20 +1,20 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { FooNodeComponent } from './foo-node.component';
+import { FieldsDelNodeComponent } from './fields-del-node.component';
 
-describe('FooNodeComponent', () => {
-  let component: FooNodeComponent;
-  let fixture: ComponentFixture<FooNodeComponent>;
+describe('FieldsDelNodeComponent', () => {
+  let component: FieldsDelNodeComponent;
+  let fixture: ComponentFixture<FieldsDelNodeComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ FooNodeComponent ]
+      declarations: [ FieldsDelNodeComponent ]
     })
     .compileComponents();
   });
 
   beforeEach(() => {
-    fixture = TestBed.createComponent(FooNodeComponent);
+    fixture = TestBed.createComponent(FieldsDelNodeComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

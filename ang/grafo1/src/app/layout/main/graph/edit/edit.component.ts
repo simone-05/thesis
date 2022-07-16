@@ -24,9 +24,13 @@ export class EditComponent implements OnInit, OnDestroy {
     this.graph_id = this.activatedRoute.snapshot.params['graph_id'];
     this.graphEditingService.loadGraph(this.graph_id);
 
+    // Quando ha finito di caricare il grafo
     this.graph_subscription = this.graphEditingService.graph$.subscribe(element => {
-      this.fm.updateGraph(this.graphEditingService.graph).subscribe(x => console.log);
-    });
+      if (this.graphEditingService.loaded$.value) {
+          // Esegue solo se il grafo è caricato, per evitare di mandare un grafo vecchio
+          this.fm.updateGraph(this.graphEditingService.graph).subscribe(x => console.log);
+        }
+      });
   }
 
   ngOnInit() {

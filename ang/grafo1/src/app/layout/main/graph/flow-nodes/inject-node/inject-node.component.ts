@@ -1,7 +1,7 @@
 import { Component, Input, OnInit, OnDestroy } from '@angular/core';
 import { AbstractControl, FormArray, FormBuilder, FormControl, FormGroup, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { Subscription } from 'rxjs';
-import { FlowNode, InjectNode } from 'src/app/shared/flow_nodes-interface';
+import { FlowNode } from 'src/app/shared/flow_nodes-interface';
 import { SidebarEditComponent } from '../../edit/sidebar-edit/sidebar-edit.component';
 import { Node, Edge, Graph, GraphEditingService } from '../../graph-editing.service';
 
@@ -58,9 +58,9 @@ export class InjectNodeComponent implements OnInit, OnDestroy {
     let node_id = this.getControl("node_id").value;
     let node_label = this.getControl("node_label").value || "";
     // let node_data: any[string] = [{id: "1", name: "content", value: this.getControl("node_content").value}];
-    let node_properties: any[string] = [];
+    // let node_properties: any[string] = [];
     let node_content = this.getControl("node_content").value;
-    let node: InjectNode = new InjectNode(node_id, node_label, node_properties, node_content/*, this.gs*/);
+    let node: FlowNode = new FlowNode(node_id, node_label, "inject", [], node_content);
     if (this.nodeEditing) {
       this.gs.editNode(node);
     } else {

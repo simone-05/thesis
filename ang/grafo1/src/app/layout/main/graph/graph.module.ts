@@ -14,7 +14,9 @@ import { ViewEditComponent } from './edit/view-edit/view-edit.component';
 import { InjectNodeComponent } from './flow-nodes/inject-node/inject-node.component';
 import { DebugNodeComponent } from './flow-nodes/debug-node/debug-node.component';
 import { MonacoEditorModule } from 'ngx-monaco-editor';
-import { FooNodeComponent } from './flow-nodes/foo-node/foo-node.component';
+import { StringOpsNodeComponent } from './flow-nodes/string-ops-node/string-ops-node.component';
+import { FieldsDelNodeComponent } from './flow-nodes/fields-del-node/fields-del-node.component';
+import { NodeBasicsComponent } from './node-basics/node-basics.component';
 
 
 @NgModule({
@@ -27,7 +29,9 @@ import { FooNodeComponent } from './flow-nodes/foo-node/foo-node.component';
     ViewComponent,
     InjectNodeComponent,
     DebugNodeComponent,
-    FooNodeComponent
+    StringOpsNodeComponent,
+    FieldsDelNodeComponent,
+    NodeBasicsComponent
   ],
   imports: [
     CommonModule,
