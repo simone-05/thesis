@@ -17,6 +17,10 @@ import { MonacoEditorModule } from 'ngx-monaco-editor';
 import { StringOpsNodeComponent } from './flow-nodes/string-ops-node/string-ops-node.component';
 import { FieldsDelNodeComponent } from './flow-nodes/fields-del-node/fields-del-node.component';
 import { NodeBasicsComponent } from './node-basics/node-basics.component';
+import { NumberOpsNodeComponent } from './flow-nodes/number-ops-node/number-ops-node.component';
+import { FieldsSelectNodeComponent } from './flow-nodes/fields-select-node/fields-select-node.component';
+import { MongoImportNodeComponent } from './flow-nodes/mongo-import-node/mongo-import-node.component';
+import { MongoWriteNodeComponent } from './flow-nodes/mongo-write-node/mongo-write-node.component';
 
 
 @NgModule({
@@ -31,7 +35,11 @@ import { NodeBasicsComponent } from './node-basics/node-basics.component';
     DebugNodeComponent,
     StringOpsNodeComponent,
     FieldsDelNodeComponent,
-    NodeBasicsComponent
+    NodeBasicsComponent,
+    NumberOpsNodeComponent,
+    FieldsSelectNodeComponent,
+    MongoImportNodeComponent,
+    MongoWriteNodeComponent
   ],
   imports: [
     CommonModule,

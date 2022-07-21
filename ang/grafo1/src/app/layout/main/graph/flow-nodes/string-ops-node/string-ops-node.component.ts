@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
 import { AbstractControl, FormBuilder, FormGroup, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
+import { Subscription } from 'rxjs';
 import { FlowNode } from 'src/app/shared/flow_nodes-interface';
 import { SidebarEditComponent } from '../../edit/sidebar-edit/sidebar-edit.component';
 import { Graph, GraphEditingService, Node } from '../../graph-editing.service';
@@ -14,6 +15,9 @@ export class StringOpsNodeComponent {
   nodeEditing: boolean;
   type: string = "string-ops";
   needSubOp: boolean = false;
+  op_value_sub: Subscription;
+  subOp_value_sub: Subscription;
+
   RegExp = RegExp;
 
   constructor(private fb: FormBuilder, private gs: GraphEditingService, private sb: SidebarEditComponent) {
@@ -23,10 +27,18 @@ export class StringOpsNodeComponent {
       node_label: null,
       node_operation: [null, Validators.required],
       node_sub_operation: null,
-      node_field: [null, Validators.required],
+      node_fields: [null, Validators.required],
       node_regex_pattern: null,
       node_regex_replace: null,
     });
+
+    this.op_value_sub = this.stringOpsForm.controls["node_operation"].valueChanges.subscribe(x => {
+      this.changedOp(x);
+    })
+
+    this.subOp_value_sub = this.stringOpsForm.controls["node_sub_operation"].valueChanges.subscribe(x => {
+      this.changedSubOp(x);
+    })
 
     this.sb.nodeSelected$.subscribe((node: Node) => {
       if (node?.type == this.type) {
@@ -42,7 +54,7 @@ export class StringOpsNodeComponent {
     const content = JSON.parse(node.content);
     this.getControl("node_operation").setValue(content["operation"]);
     this.getControl("node_sub_operation").setValue(content["sub-operation"]);
-    this.getControl("node_field").setValue(content["field"]);
+    this.getControl("node_fields").setValue(content["fields"]);
     this.getControl("node_regex_pattern").setValue(content["regex"]);
     this.getControl("node_regex_replace").setValue(content["replace"]);
   }
@@ -60,13 +72,13 @@ export class StringOpsNodeComponent {
     let node_label = this.getControl("node_label").value || "";
     let operation = this.getControl("node_operation").value;
     let sub_operation = this.getControl("node_sub_operation").value;
-    let field = this.getControl("node_field").value;
+    let fields: string[] = this.getControl("node_fields").value.toString().split(",").map((x:string) => x.trim());
     let regex = this.getControl("node_regex_pattern").value;
     let replace = this.getControl("node_regex_replace").value;
     let node_content = JSON.stringify({
       "operation": operation,
       "sub-operation": sub_operation,
-      "field": field,
+      "fields": fields,
       "regex": regex,
       "replace": replace,
     });

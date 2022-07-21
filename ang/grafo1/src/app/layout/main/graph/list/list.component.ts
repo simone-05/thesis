@@ -1,20 +1,24 @@
+import { BehaviorSubject, Subscription } from 'rxjs';
 import { FormGroup, FormBuilder } from '@angular/forms';
-import { Component, OnInit } from '@angular/core';
+import { Component, DoCheck, OnDestroy, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { Graph } from '../graph-editing.service';
 import { HighlightSpanKind } from 'typescript';
 import { SpringService } from 'src/app/shared/services/spring.service';
+import { OnChanges } from '@angular/core';
 
 @Component({
   selector: 'app-list',
   templateUrl: './list.component.html',
   styleUrls: ['./list.component.scss']
 })
-export class ListComponent {
+export class ListComponent implements OnDestroy {
   graph_deletions: {[i: string]: boolean} = {};
   graphs: Graph[] = [];
   loaded: boolean = false;
   searchForm: FormGroup;
+  searchFormSubscription: Subscription;
+  $graphsList: BehaviorSubject<Graph[]> = new BehaviorSubject<Graph[]>([]);
 
   constructor(private router: Router, private sp: SpringService, private fb: FormBuilder) {
     this.makeList();
@@ -30,23 +34,38 @@ export class ListComponent {
     this.searchForm = this.fb.group({
       input: null,
     });
+
+    this.searchFormSubscription = this.searchForm.valueChanges.subscribe((search_input: string) => {
+      let res: Graph[] = this.graphs;
+      if (search_input) { //Se stiamo cercando
+          const by_names = this.graphs.filter(x => x.name.includes(this.search_input));
+          const by_descriptions = (this.graphs
+            .filter(x => x.description.includes(this.search_input))
+            .filter(g => !by_names.includes(g)) //elimino i grafi già presenti in 'by_names', per non ripeterli
+            );
+          res = by_names.concat(by_descriptions);
+      }
+      this.$graphsList.next(res);
+    });
   }
 
+  ngOnDestroy(): void {
+      this.searchFormSubscription.unsubscribe();
+  }
 
   public get search_input(): string {
     return this.searchForm.controls["input"].value;
   }
 
-
-  getGraphs(): Graph[] {
-    // return this.Graphs.graph$.getValue();
-    if (this.search_input) { // Se stiamo cercando
-      const by_names = this.graphs.filter(x => x.name.includes(this.search_input));
-      const by_description = this.graphs.filter(x => x.description.includes(this.search_input));
-      return by_names.concat(by_description);
-    }
-    return this.graphs;
-  }
+  // getGraphs(): Graph[] {
+  //   // return this.Graphs.graph$.getValue();
+  //   if (this.search_input) { // Se stiamo cercando
+  //     const by_names = this.graphs.filter(x => x.name.includes(this.search_input));
+  //     const by_descriptions = this.graphs.filter(x => x.description.includes(this.search_input));
+  //     return by_names.concat(by_descriptions);
+  //   }
+  //   return this.graphs;
+  // }
 
   makeList() {
     this.graphs = [];
@@ -58,6 +77,7 @@ export class ListComponent {
       });
       this.graphs = this.graphs.sort((a, b) => (a.date > b.date) ? -1 : 1);
       this.loaded = true;
+      this.$graphsList.next(this.graphs);
     });
   }
 

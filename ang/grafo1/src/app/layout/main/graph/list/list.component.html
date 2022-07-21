@@ -31,7 +31,7 @@
 
     <ng-template #lista>
       <!-- Graphs List -->
-      <div class="col-md-12" *ngFor="let graph of getGraphs()">
+      <div class="col-md-12" *ngFor="let graph of $graphsList.value">
         <div class="row my-3 bg-white">
           <div class="col-sm-8 py-4 ps-5">
             <h4>{{graph.name}}</h4>

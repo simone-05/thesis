@@ -42,7 +42,7 @@ export class SidebarEditComponent implements OnInit, OnChanges, OnDestroy {
   Object = Object;
 
   constructor(public graphEditingService: GraphEditingService, private formBuilder: FormBuilder, private router: Router, private sp: SpringService) {
-    this.view = "node_debug";
+    this.view = "node_inject";
     this.isCollapsed = true;
     this.nodePropId = 0;
     this.edgePropId = 0;

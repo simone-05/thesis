@@ -118,6 +118,14 @@ $form-floating-height: add(2.6rem, $input-height-border); //riduco l'altezza del
   margin-bottom: .2rem;
 }
 
-.custom-popover {
+.flownode-popover {
   margin-left: 1rem;
+}
+
+.custom-popover {
+  background-color: #000;
+  > .popover-body {
+    color: #fff;
+    padding: .5rem;
+  }
 }

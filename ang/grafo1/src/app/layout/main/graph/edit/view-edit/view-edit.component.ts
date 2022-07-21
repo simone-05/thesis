@@ -46,7 +46,7 @@ export class ViewEditComponent implements OnDestroy {
     this.moreNodeDetails = {id: '-1', type: '', data: null};
     this.layout = new DagreClusterLayout();
 
-    this.graph_subscription = this.graphEditingService.graph$.subscribe((element) => {
+    this.graph_subscription = this.graphEditingService.graph$.subscribe((element: any) => {
       if (element) {
         this.updateGraph();
       }
@@ -188,7 +188,8 @@ export class ViewEditComponent implements OnDestroy {
   }
 
   /**
-   * Funzione chiamata dall attr.fill nel template del nodo corrispondente, per colorarsi
+   * Funzione chiamata dall attr.fill nel template del nodo corrispondente, per colorarsi.
+   * @Cosa-fa: guarda nel nodo qual è il suo attributo di colore e restituisce la variabile scss del colore corrispondente
    * @param id id del nodo
    * @param part 'body'|'header' parte del nodo (il rect element)
    * @returns il colore come variabile es: 'var(--flow-node-body-default)'
@@ -199,6 +200,11 @@ export class ViewEditComponent implements OnDestroy {
     return "var(--flow-node-"+part+"-"+ status +")";
   }
 
+  /**
+   * Setta il contenuto del popover con il json dell'attributo corrispondente del nodo
+   * @param id id del nodo
+   * @param type può essere 'input'|'output'|'content'
+   */
   setMoreNodeDetails(id: string, type: "input"|"output"|"content"|'') {
     const node: FlowNode = this.graphEditingService.getFlowNode(id);
     let data = null;
@@ -213,7 +219,7 @@ export class ViewEditComponent implements OnDestroy {
   }
 
   popoverContent(): string {
-    let popover_element = document.getElementsByTagName("ngb-popover-window").item(0)?.getElementsByClassName("popover-body").item(0);
+    let popover_element = document.getElementsByClassName("flownode-popover").item(0)?.getElementsByClassName("popover-body").item(0);
     if (!popover_element?.children.namedItem("my_popover_element")) {
       let my_popover_html = document.createElement("pre");
       my_popover_html.setAttribute("id", "my_popover_element");

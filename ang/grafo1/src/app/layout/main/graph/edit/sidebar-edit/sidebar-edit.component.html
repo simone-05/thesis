@@ -17,7 +17,11 @@
             <option value="node_inject">Node Inject</option>
             <option value="node_debug">Node Debug</option>
             <option value="node_string-ops">Node String Operations</option>
-            <option value="node_fields-del">Node Fields Deletion</option>
+            <option value="node_number-ops">Node Number Operations</option>
+            <option value="node_fields-sel">Node fields selection</option>
+            <option value="node_mongo-in">Import from mongodb</option>
+            <option value="node_mongo-out">Write to mongodb</option>
+            <!-- <option value="node_fields-del">Node Fields Deletion</option> -->
           </optgroup>
         </select>
       </div>
@@ -111,7 +115,7 @@
                 <option [ngValue]="null">No input node</option>
                 <!-- <option value="">null</option> -->
                 <option *ngFor="let item of this.graphEditingService.getNodes()" [value]="item.id">
-                  <p>{{item.id}}</p>
+                  <p>{{item.id}} - {{item.type}}</p>
                 </option>
               </select>
               <label>Source node</label>
@@ -124,7 +128,7 @@
               <select class="form-select my-bg-grey my-2" formControlName="cond_target"
                 [ngClass]="{'is-invalid': !condForm.controls['cond_target'].valid}" [attr.disabled]="nodeEditing? true:null">
                 <option *ngFor="let item of this.graphEditingService.getNodes()" [value]="item.id">
-                  <p>{{item.id}}</p>
+                  <p>{{item.id}} - {{item.type}}</p>
                 </option>
               </select>
               <label>Target node</label>
@@ -197,7 +201,7 @@
               <select class="form-select my-bg-grey my-2" formControlName="edge_source"
                 [ngClass]="{'is-invalid': !edgeForm.controls['edge_source'].valid}" [attr.disabled]="edgeEditing?true:null">
                 <option *ngFor="let item of this.graphEditingService.getNodes()" [value]="item.id">
-                  <p>{{item.id}}</p>
+                  <p>{{item.id}} - {{item.type}}</p>
                 </option>
               </select>
               <label>Source node</label>
@@ -209,7 +213,7 @@
               <select class="form-select my-bg-grey my-2" formControlName="edge_target"
                 [ngClass]="{'is-invalid': !edgeForm.controls['edge_target'].valid}" [attr.disabled]="edgeEditing?true: null">
                 <option *ngFor="let item of this.graphEditingService.getNodes()" [value]="item.id">
-                  <p>{{item.id}}</p>
+                  <p>{{item.id}} - {{item.type}}</p>
                 </option>
               </select>
               <label>Target node</label>
@@ -252,9 +256,25 @@
           <app-string-ops-node></app-string-ops-node>
         </div>
 
-        <div *ngIf="view == 'node_fields-del'">
-          <app-fields-del-node></app-fields-del-node>
+        <div *ngIf="view == 'node_number-ops'">
+          <app-number-ops-node></app-number-ops-node>
         </div>
+
+        <div *ngIf="view == 'node_fields-sel'">
+          <app-fields-select-node></app-fields-select-node>
+        </div>
+
+        <div *ngIf="view == 'node_mongo-in'">
+          <app-mongo-import-node></app-mongo-import-node>
+        </div>
+
+        <div *ngIf="view == 'node_mongo-out'">
+          <app-mongo-write-node></app-mongo-write-node>
+        </div>
+
+        <!-- <div *ngIf="view == 'node_fields-del'">
+          <app-fields-del-node></app-fields-del-node>
+        </div> -->
 
       </div>
 

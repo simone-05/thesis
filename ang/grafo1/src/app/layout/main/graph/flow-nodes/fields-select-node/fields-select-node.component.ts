@@ -1,50 +1,44 @@
-import { Component, Input, OnInit, OnDestroy } from '@angular/core';
-import { AbstractControl, FormArray, FormBuilder, FormControl, FormGroup, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
-import { Subscription } from 'rxjs';
-import { FlowNode } from 'src/app/shared/flow_nodes-interface';
+import { Graph, GraphEditingService } from 'src/app/layout/main/graph/graph-editing.service';
+import { Component, OnDestroy, OnInit } from '@angular/core';
+import { AbstractControl, FormBuilder, FormGroup, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { SidebarEditComponent } from '../../edit/sidebar-edit/sidebar-edit.component';
-import { Node, Edge, Graph, GraphEditingService } from '../../graph-editing.service';
+import { Node } from 'src/app/layout/main/graph/graph-editing.service';
+import { FlowNode } from 'src/app/shared/flow_nodes-interface';
+import { Subscription } from 'rxjs';
 
 @Component({
-  selector: 'app-inject-node',
-  templateUrl: './inject-node.component.html',
-  styleUrls: ['./inject-node.component.scss']
+  selector: 'app-fields-select-node',
+  templateUrl: './fields-select-node.component.html',
+  styleUrls: ['./fields-select-node.component.scss']
 })
-export class InjectNodeComponent implements OnInit, OnDestroy {
-  injectForm: FormGroup;
+export class FieldsSelectNodeComponent {
+  fieldsSelForm: FormGroup;
   nodeEditing: boolean;
-  // monaco.editor.defineTheme("my-theme", { base: "vs", inherit: true, colors: {"editorGutter.background": "#555"}});
-  editorOptions = { theme: 'vs', language: 'json', lineNumbers: "on"};
-  node_subscription: Subscription;
-
+  type: string = "fields-sel";
 
   constructor(private fb: FormBuilder, private gs: GraphEditingService, private sb: SidebarEditComponent) {
     this.nodeEditing = false;
-    this.injectForm = this.fb.group({
+    this.fieldsSelForm = this.fb.group({
       node_id: [null, [Validators.required, this.checkNodeId()]],
       node_label: null,
-      node_content: null,
+      node_operation: [null, Validators.required],
+      node_fields: [null, Validators.required],
     });
 
-    this.node_subscription = this.sb.nodeSelected$.subscribe((node: Node) => {
-      if (node?.type == "inject") {
+    this.sb.nodeSelected$.subscribe((node: Node) => {
+      if (node?.type == this.type) {
         this.selectedNodeInputChange(node);
       }
     });
-  }
-
-  ngOnInit(): void {
-  }
-
-  ngOnDestroy(): void {
-    this.node_subscription.unsubscribe();
   }
 
   selectedNodeInputChange(node: any) {
     this.nodeEditing = true;
     this.getControl("node_id").setValue(node.id);
     this.getControl("node_label").setValue(node.label);
-    this.getControl("node_content").setValue(node.content);
+    const content = JSON.parse(node.content);
+    this.getControl("node_operation").setValue(content["operation"]);
+    this.getControl("node_fields").setValue(content["fields"]);
   }
 
   get graph(): Graph {
@@ -52,16 +46,19 @@ export class InjectNodeComponent implements OnInit, OnDestroy {
   }
 
   getControl(x: string) {
-    return this.injectForm.controls[x];
+    return this.fieldsSelForm.controls[x];
   }
 
   tryNode() {
     let node_id = this.getControl("node_id").value;
     let node_label = this.getControl("node_label").value || "";
-    // let node_data: any[string] = [{id: "1", name: "content", value: this.getControl("node_content").value}];
-    // let node_properties: any[string] = [];
-    let node_content = this.getControl("node_content").value;
-    let node: FlowNode = new FlowNode(node_id, node_label, "inject", [], node_content);
+    let operation = this.getControl("node_operation").value;
+    let fields: string[] = this.getControl("node_fields").value.toString().split(",").map((x: string) => x.trim()).filter((x: string) => x);
+    let node_content = JSON.stringify({
+      "operation": operation,
+      "fields": fields,
+    });
+    let node: FlowNode = new FlowNode(node_id, node_label, this.type, [], node_content);
     if (this.nodeEditing) {
       this.gs.editNode(node);
     } else {
@@ -78,7 +75,7 @@ export class InjectNodeComponent implements OnInit, OnDestroy {
 
   clearNodeInput() {
     this.nodeEditing = false;
-    this.injectForm.reset();
+    this.fieldsSelForm.reset();
   }
 
   checkNodeId(): ValidatorFn {

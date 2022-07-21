@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
@@ -23,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.google.gson.Gson;
 
+import gruppo1.grafofuncmanager.Functions.NumbersFns;
 import gruppo1.grafofuncmanager.Functions.StringsFns;
 import gruppo1.grafofuncmanager.Model.Edge;
 import gruppo1.grafofuncmanager.Model.Flownode;
@@ -107,9 +109,9 @@ class GraphController {
                 Flownode next_node = i.next();
                 //Trasmetto il contenuto al prossimo nodo
                 try {
-                    transmitMessage(current_node, next_node);
+                    if (!transmitMessage(current_node, next_node)) continue;
                 } catch(Exception e) {
-                    System.out.println("Eccezione, probabilmente non c'è il nodo nel grafo (indice tornato -1): "+e);
+                    System.out.println("Eccezione, forse non c'è il nodo nel grafo (indice tornato -1): "+e);
                 }
                 // if (!visited[graph.getNodeIndex(next_node)]) {
                 //     visited[graph.getNodeIndex(next_node)] = true;
@@ -121,20 +123,18 @@ class GraphController {
     }
 
     /**
-     * Copies the 'output' of the 'current' node to the 'input' of the 'next' node, only if the message has no "ERROR" field
+     * Copies the 'output' of the 'current' node to the 'input' of the 'next' node
      * @param current the node with the input to copy from
      * @param next the node with the output to copy to
      */
-    private void transmitMessage(Flownode current, Flownode next) {
-        JSONObject msg = new JSONObject(current.getOutput());
-        try {
-            msg.get("ERROR");
-        } catch(Exception e) {
-            // Se non trova il campo 'ERRORE' => non c'è stato errore
-            next.setInput(current.getOutput());
-        }
-        // Ha trovato il campo 'ERRORE' => non trasmette il messaggio al prossimo nodo
-        return;
+    private boolean transmitMessage(Flownode current, Flownode next) {
+        if (next.getType().equals("inject")) return false;
+        else if (current.getType().equals("debug")) return false;
+        else if (current.getType().equals("mongo-out")) return false;
+
+        // Altrimenti possiamo trasmettere il messaggio al prossimo nodo
+        next.setInput(current.getOutput());
+        return true;
     }
 
     /**
@@ -155,10 +155,18 @@ class GraphController {
                 return true;
             case "string-ops":
                 return stringFunc(node);
-            case "fields-del":
-                return deleteFields(node);
+            case "number-ops":
+                return numberFunc(node);
+            case "fields-sel":
+                return fieldsSelectFunc(node);
+            case "mongo-in":
+                return mongoImport(node);
+            case "mongo-out":
+                return mongoWrite(node);
+            // case "fields-del":
+            //     return deleteFields(node);
             default:
-                node.setOutput(nodeError(node, "unknown node type"));
+                node.setOutput(nodeError(node, "Unknown node type"));
                 return false;
             }
         } catch(Exception e) {
@@ -245,25 +253,38 @@ class GraphController {
         JSONObject input_json = new JSONObject(node.getInput());
         JSONObject content = new JSONObject(node.getContent());
         String op = content.getString("operation"); // L'operazione da effettuare
-        String field = content.getString("field");
-        String input_field_value = "";
+        List<String> fields = new ArrayList<>();
+        for (Object obj : content.getJSONArray("fields")) {
+            fields.add(obj.toString());
+        }
+        List<String> input_fields_values = new ArrayList<>();
         String sub_op = ""; // Il nome della sub-operazione
         String regex_pattern = "";
         Pattern pattern = null;
         String output = ""; // La stringa json che scriveremo come output
 
-        // Controllo che esista il campo selezionato, nell'input
+        // Controllo che esista e non sia nullo il campo selezionato, nell'input
+        String error_field = "";
         try {
-            input_field_value = input_json.getString(field);
+            for (String field : fields) {
+                error_field = field;
+                if (input_json.isNull(error_field)) {
+                    node.setOutput(nodeError(node, "Field: '" + error_field + "' is null or doesn't exist"));
+                    return false;
+                }
+                input_fields_values.add(input_json.getString(field));
+            }
         } catch(JSONException je) {
-            output = nodeError(node, "No '"+ field +"' named field found in input data");
+            node.setOutput(nodeError(node, "Field: '" + error_field + "' of specified type not found in input data"));
             return false;
         }
 
         // Controllo stringa non vuota
-        if (input_field_value == null || input_field_value.isBlank() || input_field_value.isEmpty()) {
-            output = nodeError(node, "Value of '"+field+"' is either blank, null or empty");
-            return false;
+        for (String value : input_fields_values) {
+            if (value == null || value.isBlank() || value.isEmpty()) {
+                node.setOutput(nodeError(node, "Value of '"+fields.get(input_fields_values.indexOf(value))+"' is either blank, null or empty"));
+                return false;
+            }
         }
         
         // Vari controlli su regex, che sia presente nel json e che sia valido
@@ -271,61 +292,65 @@ class GraphController {
             try {
                 sub_op = content.getString("sub-operation");
             } catch(JSONException e) {
-                output = nodeError(node, "Couldn't find 'sub-operation' field value");
+                node.setOutput(nodeError(node, "Couldn't find 'sub-operation' field value"));
                 return false;
             }
             try {
                 regex_pattern = content.getString("regex");
                 pattern = Pattern.compile(regex_pattern);
             } catch(JSONException e) {
-                output = nodeError(node, "No input regex pattern");
+                node.setOutput(nodeError(node, "No input regex pattern"));
                 return false;
             } catch(PatternSyntaxException e) {
-                output = nodeError(node, "Error in the regular expression pattern");
+                node.setOutput(nodeError(node, "Error in the regular expression pattern"));
                 return false;
             }
         }
         
-        String res = input_field_value;
+        List<String> res = new ArrayList<String>(input_fields_values);
 
         switch (op) {
             case "upper":
-                res = StringsFns.getInstance().toUpper(input_field_value);
+                res = res.stream().map(x -> StringsFns.getInstance().toUpper(x)).collect(Collectors.toList());
                 break;
             case "lower":
-                res = StringsFns.getInstance().toLower(input_field_value);
+                res = res.stream().map(x -> StringsFns.getInstance().toLower(x)).collect(Collectors.toList());
                 break;
             case "regex":
-                Matcher matcher = pattern.matcher(input_field_value);
-                // boolean matchFound = matcher.find();
-                List<Integer> starts = new ArrayList<>();
-                List<Integer> ends = new ArrayList<>();
-                while (matcher.find()) {
-                    starts.add(matcher.start());
-                    ends.add(matcher.end());
+                for (int i = 0; i < input_fields_values.size(); i++) {
+                    String input_value = input_fields_values.get(i);
+                    Matcher matcher = pattern.matcher(input_value);
+                    // boolean matchFound = matcher.find();
+                    List<Integer> starts = new ArrayList<>();
+                    List<Integer> ends = new ArrayList<>();
+                    while (matcher.find()) {
+                        starts.add(matcher.start());
+                        ends.add(matcher.end());
 
-                    // f(matcher.groupCount()); //0 //0
-                    // // Non fa fare il while
-                    // // f(matcher.results().count()); //1 //0
-                }
-                switch(sub_op) {
-                    case "delete":
-                        res = input_field_value.replaceAll(regex_pattern, "");
-                        break;
-                    case "keep":
-                        res = input_field_value.replaceAll("/^((?!"+regex_pattern+").)*$/", "");
-                        break;
-                    case "replace":
-                        String replace_string = "";
-                        try {
-                            replace_string = content.getString("replace");
-                        } catch(Exception e) {
-                            output = nodeError(node, "No 'replace' field in node content");
-                            return false;
-                        }
-                        res = input_field_value.replaceAll(regex_pattern, replace_string);
-                        break;
-                    default: break;
+                        // f(matcher.groupCount()); //0 //0
+                        // // Non fa fare il while
+                        // // f(matcher.results().count()); //1 //0
+                    }
+                    switch(sub_op) {
+                        case "delete":
+                            input_value = input_value.replaceAll(regex_pattern, "");
+                            break;
+                        case "keep":
+                            input_value = input_value.replaceAll("/^((?!"+regex_pattern+").)*$/", "");
+                            break;
+                        case "replace":
+                            String replace_string = "";
+                            try {
+                                replace_string = content.getString("replace");
+                            } catch(Exception e) {
+                                output = nodeError(node, "No 'replace' field in node content");
+                                return false;
+                            }
+                            input_value = input_value.replaceAll(regex_pattern, replace_string);
+                            break;
+                        default: break;
+                    }
+                    res.set(i, input_value);
                 }
                 // while (matcher.find()) {
                 //     // matcher.
@@ -344,15 +369,147 @@ class GraphController {
                 break;
         }
             
-        output = input_json.put(field, res).toString();
+        for (int i = 0; i < res.size(); i++) {
+            input_json.put(fields.get(i), res.get(i));
+        }
+        output = input_json.toString();
         node.setOutput(output);
         return true;
     }
 
-    private void f(Object x) {
-        System.out.println(x);
+    /**
+     * @param node
+     * @return
+     */
+    public boolean numberFunc(Flownode node) {
+        JSONObject input_json = new JSONObject(node.getInput());
+        JSONObject content = new JSONObject(node.getContent());
+        String op = content.getString("operation"); // L'operazione da effettuare
+        List<String> fields = new ArrayList<>();
+        for (Object obj : content.getJSONArray("fields")) {
+            fields.add(obj.toString());
+        }
+        List<Double> input_fields_values = new ArrayList<>();
+        // String sub_op = ""; // Il nome della sub-operazione
+        String output = ""; // La stringa json che scriveremo come output
+        Integer digits = 0;
+
+        // Controllo che esista e non sia nullo il campo selezionato, nell'input
+        String error_field = "";
+        try {
+            for (String field : fields) {
+                error_field = field;
+                if (input_json.isNull(error_field)) {
+                    node.setOutput(nodeError(node, "Field: '"+error_field+"' is null or doesn't exist"));
+                    return false;
+                }
+                input_fields_values.add(input_json.getDouble(field));
+            }
+        } catch (JSONException je) {
+            node.setOutput(nodeError(node, "Field: '"+error_field+"' of specified type not found in input data"));
+            return false;
+        }
+
+        if (op.equals("trim") || op.equals("round")) {
+            try {
+                digits = content.getInt("digits");
+            } catch (JSONException e) {
+                node.setOutput(nodeError(node, "No digits number specified"));
+                return false;
+            }
+        }
+
+        List<Double> res = new ArrayList<Double>(input_fields_values);
+        
+        switch(op) {
+            case "integer":
+                res = res.stream().map(x -> NumbersFns.getInstance().getInt(x)).collect(Collectors.toList());
+                break;
+            case "trim":
+                // res = res.stream().map(x -> NumbersFns.getInstance().trimDecimals(x, digits)).collect(Collectors.toList());
+                for (int i = 0; i < res.size(); i++) {
+                    res.set(i, NumbersFns.getInstance().trimDecimals(res.get(i), digits));
+                }
+                break;
+            case "round":
+                // res = res.stream().map(x -> NumbersFns.getInstance().round(x, digits)).collect(Collectors.toList());
+                for (int i = 0; i < res.size(); i++) {
+                    res.set(i, NumbersFns.getInstance().roundDecimals(res.get(i), digits));
+                }
+                break;
+            case "non_negative":
+                for (int i = 0; i < res.size(); i++) {
+                    res.set(i, NumbersFns.getInstance().isNonNegative(res.get(i))? 1.0:0);
+                }
+            default: break;
+        }
+
+        for (int i = 0; i < res.size(); i++) {
+            input_json.put(fields.get(i), res.get(i));
+        }
+        output = input_json.toString();
+        node.setOutput(output);
+        return true;
     }
 
+    public boolean fieldsSelectFunc(Flownode node) {
+        final JSONObject input_json = new JSONObject(node.getInput());
+        final JSONObject content_json = new JSONObject(node.getContent());
+        final String op = content_json.getString("operation"); // L'operazione da effettuare
+        final List<String> content_fields_list = new ArrayList<>();
+        for (Object obj : content_json.getJSONArray("fields")) {
+            content_fields_list.add(obj.toString());
+        }
+        JSONObject output_json = input_json; // Il json che scriveremo come output
+        
+        // Controllo che esista il campo selezionato, nell'input
+        for (String field : content_fields_list) {
+            if (!input_json.has(field)) {
+                node.setOutput(nodeError(node, "Field: '" + field + "' doesn't exist"));
+                return false;
+            }
+        }
+        
+        switch (op) {
+            case "select":
+                for (Iterator<String> iterator = output_json.keys(); iterator.hasNext(); ) {
+                    String value = iterator.next();
+                    if (!content_fields_list.contains(value)) {
+                        iterator.remove();
+                    }
+                }
+                break;
+            case "deselect":
+                for (Iterator<String> iterator = output_json.keys(); iterator.hasNext();) {
+                    String value = iterator.next();
+                    if (content_fields_list.contains(value)) {
+                        iterator.remove();
+                    }
+                }
+                break;
+            default:
+                break;
+        }
+
+        node.setOutput(output_json.toString());
+        return true;
+    }
+
+    public boolean mongoImport(Flownode node) {
+        final JSONObject content_json = new JSONObject(node.getContent());
+        final String database = content_json.getString("db");
+        final String collection = content_json.getString("collection");
+        JSONObject output_json = new JSONObject(); // Il json che scriveremo come output
+        
+
+        node.setOutput(output_json.toString());
+        return false;
+    }
+
+    public boolean mongoWrite(Flownode node) {
+        return false;
+    }
+    
     /**
      * La funzione dei nodi di tipo 'fields-del'
      * @param node
