@@ -41,8 +41,13 @@ export class SidebarEditComponent implements OnInit, OnChanges, OnDestroy {
 
   Object = Object;
 
+  basicsForm: { id: string, label: string | null, valid: boolean } = { id: "null", label: null, valid: false };
+  nodeBasicsId: any;
+  nodeBasicsLabel: any;
+  nodeBasicsReset: any;
+
   constructor(public graphEditingService: GraphEditingService, private formBuilder: FormBuilder, private router: Router, private sp: SpringService) {
-    this.view = "node_inject";
+    this.view = "node_task";
     this.isCollapsed = true;
     this.nodePropId = 0;
     this.edgePropId = 0;
@@ -53,12 +58,9 @@ export class SidebarEditComponent implements OnInit, OnChanges, OnDestroy {
     });
 
     this.nodeForm = this.formBuilder.group({
-      node_id: [null, [Validators.required, this.checkNodeId()]],
-      node_label: null,
       node_type: null,
       node_data: this.formBuilder.array([]),
-    });
-    // this.nodeForm.valueChanges.subscribe(()=>console.log(this.nodeForm.controls["node_data"]));
+    }, {validators: this.nodeBasicsValidation()});
 
     this.nodePropForm = this.formBuilder.group({
       node_prop_name: [null, [Validators.required, this.checkNodeProperty()]],
@@ -196,8 +198,10 @@ export class SidebarEditComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   tryNode() {
-    let node_id = this.nodeForm.controls["node_id"].value;
-    let node_label = this.nodeForm.controls["node_label"].value || "";
+    // let node_id = this.nodeForm.controls["node_id"].value;
+    // let node_label = this.nodeForm.controls["node_label"].value || "";
+    let node_id = this.basicsForm.id;
+    let node_label = this.basicsForm.label||"";
     this.nodeForm.controls['node_type'].setValue(this.view == "node_cond" ? "cond" : "task");
     let node_type = this.nodeForm.controls["node_type"].value;
     let node_data = this.nodeForm.controls["node_data"].value;
@@ -308,7 +312,8 @@ export class SidebarEditComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   deleteNode() {
-    let node_id = this.nodeForm.controls["node_id"].value;
+    // let node_id = this.nodeForm.controls["node_id"].value;
+    let node_id = this.basicsForm.id;
     this.graphEditingService.deleteNode(node_id);
     this.clearNodeInput();
   }
@@ -347,6 +352,11 @@ export class SidebarEditComponent implements OnInit, OnChanges, OnDestroy {
     this.nodeEditing = false;
     this.nodePropId = 0;
     this.nodeForm.reset();
+
+    this.nodeBasicsId = null;
+    this.nodeBasicsLabel = null;
+    this.nodeBasicsReset = !this.nodeBasicsReset;
+    
     this.nodeForm.controls["node_data"] = this.formBuilder.array([]);
     // this.nodeDataForm.updateValueAndValidity();
   }
@@ -387,8 +397,11 @@ export class SidebarEditComponent implements OnInit, OnChanges, OnDestroy {
     this.clearCondInput();
     this.nodeEditing = true;
     if (node.type == "task") {
-      this.nodeForm.controls["node_id"].setValue(node.id);
-      this.nodeForm.controls["node_label"].setValue(node.label);
+      // Devo ritardare altrimenti più sopra, quando chiamo clearNodeInput(), pulisco il node basics form, ma dopo aver settato qui sotto i suoi valori. Mentre dovrebbe essere il contrario perciò ritardo il setting dei campi
+      setTimeout(() => {
+        this.nodeBasicsId = node.id;
+        this.nodeBasicsLabel = node.label;
+      }, 10);
       this.graph.clusters.forEach(clus => {
         clus.childNodeIds?.forEach(ids => {
           if (ids == node.id) {
@@ -547,22 +560,6 @@ export class SidebarEditComponent implements OnInit, OnChanges, OnDestroy {
   // removeEdgeDataField(n: number) {
   //   this.edgeDataForm.removeAt(n);
   // }
-
-  checkNodeId(): ValidatorFn {
-    return (control: AbstractControl): ValidationErrors | null => {
-      if (control.value) {
-        if (!this.nodeEditing) {
-          if (/[_-\s]/g.test(control.value)) {
-            return { illegalCharacters: true, msg: "Can't contain any _ - or whitespaces" }
-          }
-          if (this.graph.nodes.filter(node => node.type != "cond" && node.type != "clus").find(nodo => nodo.id == control.value)) {
-            return { already: true, msg: "Already exists a node with this id" };
-          }
-        }
-      }
-      return null;
-    }
-  }
 
   checkNodeProperty(): ValidatorFn {
     return (control: AbstractControl): ValidationErrors | null => {
@@ -753,6 +750,26 @@ export class SidebarEditComponent implements OnInit, OnChanges, OnDestroy {
   //   let input = {id: target.properties.length+1, name: "input", value: contentToSend};
   //   target.properties.push(input);
   //   return true;
+  // }
+
+  nodeBasicsValidation(): ValidatorFn {
+    return () => {
+      if (this.basicsForm.valid) return null;
+      else return { basicsInvalid: true };
+    }
+  }
+
+  nodeBasicsValidationEvent(event: any) {
+    this.basicsForm = event;
+    this.nodeForm.updateValueAndValidity();
+  };
+
+  /** @param value 1 -> reset , 2 -> set */
+  // forceNodeBasicsChange(value: number) {
+  //   this.nodeBasics_change = value;
+  //   setTimeout(() => {
+  //     this.nodeBasics_change = 0;
+  //   }, 100);
   // }
 
 }

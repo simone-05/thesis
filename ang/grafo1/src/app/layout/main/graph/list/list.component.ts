@@ -1,9 +1,8 @@
 import { BehaviorSubject, Subscription } from 'rxjs';
 import { FormGroup, FormBuilder } from '@angular/forms';
-import { Component, DoCheck, OnDestroy, OnInit } from '@angular/core';
+import { Component, DoCheck, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { Graph } from '../graph-editing.service';
-import { HighlightSpanKind } from 'typescript';
 import { SpringService } from 'src/app/shared/services/spring.service';
 import { OnChanges } from '@angular/core';
 
@@ -71,11 +70,13 @@ export class ListComponent implements OnDestroy {
     this.graphs = [];
     this.loaded = false;
     this.sp.getAll().subscribe(graphs => {
-      graphs.forEach(graph => {
-        this.graphs.push(graph);
-        this.graph_deletions[graph.name] = false;
-      });
-      this.graphs = this.graphs.sort((a, b) => (a.date > b.date) ? -1 : 1);
+      if (graphs) {
+        graphs.forEach(graph => {
+          this.graphs.push(graph);
+          this.graph_deletions[graph.name] = false;
+        });
+        this.graphs = this.graphs.sort((a, b) => (a.date > b.date) ? -1 : 1);
+      }
       this.loaded = true;
       this.$graphsList.next(this.graphs);
     });
@@ -100,6 +101,7 @@ export class ListComponent implements OnDestroy {
     }
   }
 
+  @HostListener('window:resize', ['$event'])
   getSearchBoxWidth(): string {
     let width: number|undefined = document.getElementById("search-box")?.clientWidth;
     if (width== undefined) {

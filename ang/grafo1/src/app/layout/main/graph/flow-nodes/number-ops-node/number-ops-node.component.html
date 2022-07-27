@@ -1,6 +1,6 @@
 <div>
   <form class="d-flex-column" [formGroup]="numberOpsForm" novalidate>
-    <app-node-basics [parentForm]="numberOpsForm" [nodeEditing]="nodeEditing"></app-node-basics>
+    <app-node-basics (formEmit)="nodeBasicsValidationEvent($event)" [input_id]="nodeBasicsId" [input_label]="nodeBasicsLabel" [form_reset]="nodeBasicsReset" [nodeEditing]="nodeEditing"></app-node-basics>
 
     <div class="node-form-div">
       <hr class="m-2">
@@ -9,7 +9,7 @@
     <div class="form-floating">
       <select formControlName="node_operation" class="my-2 form-select my-bg-grey" [ngClass]="{'is-invalid': !numberOpsForm.controls['node_operation'].valid}">
         <option value="integer">To integer</option>
-        <option value="non_negative">Check non negative</option>
+        <option value="non_negative">Negatives to zero</option>
         <!-- <option value="trim">Trim decimals</option> -->
         <option value="round">Round decimals</option>
       </select>

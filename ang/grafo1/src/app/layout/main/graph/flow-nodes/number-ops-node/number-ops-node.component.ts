@@ -21,16 +21,19 @@ export class NumberOpsNodeComponent implements OnDestroy {
 
   RegExp = RegExp;
 
+  basicsForm: { id: string, label: string | null, valid: boolean } = { id: "null", label: null, valid: false };
+  nodeBasicsId: any;
+  nodeBasicsLabel: any;
+  nodeBasicsReset: any;
+
   constructor(private fb: FormBuilder, private gs: GraphEditingService, private sb: SidebarEditComponent) {
     this.nodeEditing = false;
     this.numberOpsForm = this.fb.group({
-      node_id: [null, [Validators.required, this.checkNodeId()]],
-      node_label: null,
       node_operation: [null, Validators.required],
       // node_sub_operation: null,
       node_fields: [null, Validators.required],
       node_digits: null,
-    });
+    }, { validators: this.nodeBasicsValidation() });
 
     this.operation_value_sub = this.numberOpsForm.controls["node_operation"].valueChanges.subscribe(x => {
       this.changedOp(x);
@@ -49,8 +52,8 @@ export class NumberOpsNodeComponent implements OnDestroy {
 
   selectedNodeInputChange(node: any) {
     this.nodeEditing = true;
-    this.getControl("node_id").setValue(node.id);
-    this.getControl("node_label").setValue(node.label);
+    this.nodeBasicsId = node.id;
+    this.nodeBasicsLabel = node.label;
     const content = JSON.parse(node.content);
     this.getControl("node_operation").setValue(content["operation"]);
     // this.getControl("node_sub_operation").setValue(content["sub-operation"]);
@@ -67,8 +70,8 @@ export class NumberOpsNodeComponent implements OnDestroy {
   }
 
   tryNode() {
-    let node_id = this.getControl("node_id").value;
-    let node_label = this.getControl("node_label").value || "";
+    let node_id = this.basicsForm.id;
+    let node_label = this.basicsForm.label || "";
     let operation = this.getControl("node_operation").value;
     // let sub_operation = this.getControl("node_sub_operation").value;
     let fields: string[] = this.getControl("node_fields").value.toString().split(",").map((x: string) => x.trim()).filter((x: string) => x);
@@ -89,7 +92,7 @@ export class NumberOpsNodeComponent implements OnDestroy {
   }
 
   deleteNode() {
-    let node_id = this.getControl("node_id").value;
+    let node_id = this.basicsForm.id;
     this.gs.deleteNode(node_id);
     this.clearNodeInput();
   }
@@ -98,22 +101,25 @@ export class NumberOpsNodeComponent implements OnDestroy {
     this.nodeEditing = false;
     // this.needSubOp = false;
     this.numberOpsForm.reset();
+    this.nodeBasicsFormReset();
   }
 
-  checkNodeId(): ValidatorFn {
-    return (control: AbstractControl): ValidationErrors | null => {
-      if (control.value) {
-        if (!this.nodeEditing) {
-          if (/[_-\s]/g.test(control.value)) {
-            return { illegalCharacters: true, msg: "Can't contain any _ - or whitespaces" }
-          }
-          if (this.graph.nodes.find(nodo => nodo.id == control.value)) {
-            return { already: true, msg: "Already exists a node with this id" };
-          }
-        }
-      }
-      return null;
+  nodeBasicsValidation(): ValidatorFn {
+    return () => {
+      if (this.basicsForm.valid) return null;
+      else return { basicsInvalid: true };
     }
+  }
+
+  nodeBasicsValidationEvent(event: any) {
+    this.basicsForm = event;
+    this.numberOpsForm.updateValueAndValidity();
+  };
+
+  nodeBasicsFormReset() {
+    this.nodeBasicsId = null;
+    this.nodeBasicsLabel = null;
+    this.nodeBasicsReset = !this.nodeBasicsReset;
   }
 
   changedOp(selection: string) {

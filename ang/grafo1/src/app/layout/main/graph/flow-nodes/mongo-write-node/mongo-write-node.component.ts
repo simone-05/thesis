@@ -14,15 +14,17 @@ export class MongoWriteNodeComponent {
   mongoWriteForm: FormGroup;
   nodeEditing: boolean;
   type: string = "mongo-out";
+  basicsForm: { id: string, label: string | null, valid: boolean } = { id: "null", label: null, valid: false };
+  nodeBasicsId: any;
+  nodeBasicsLabel: any;
+  nodeBasicsReset: any;
 
   constructor(private fb: FormBuilder, private gs: GraphEditingService, private sb: SidebarEditComponent) {
     this.nodeEditing = false;
     this.mongoWriteForm = this.fb.group({
-      node_id: [null, [Validators.required, this.checkNodeId()]],
-      node_label: null,
       node_db: [null, Validators.required],
       node_collection: [null, Validators.required],
-    });
+    }, { validators: this.nodeBasicsValidation() });
 
     this.sb.nodeSelected$.subscribe((node: Node) => {
       if (node?.type == this.type) {
@@ -33,8 +35,8 @@ export class MongoWriteNodeComponent {
 
   selectedNodeInputChange(node: any) {
     this.nodeEditing = true;
-    this.getControl("node_id").setValue(node.id);
-    this.getControl("node_label").setValue(node.label);
+    this.nodeBasicsId = node.id;
+    this.nodeBasicsLabel = node.label;
     const content = JSON.parse(node.content);
     this.getControl("node_db").setValue(content["db"]);
     this.getControl("node_collection").setValue(content["collection"]);
@@ -49,8 +51,8 @@ export class MongoWriteNodeComponent {
   }
 
   tryNode() {
-    let node_id = this.getControl("node_id").value;
-    let node_label = this.getControl("node_label").value || "";
+    let node_id = this.basicsForm.id;
+    let node_label = this.basicsForm.label || "";
     let db = this.getControl("node_db").value;
     let collection = this.getControl("node_collection").value;
     let node_content = JSON.stringify({
@@ -67,7 +69,7 @@ export class MongoWriteNodeComponent {
   }
 
   deleteNode() {
-    let node_id = this.getControl("node_id").value;
+    let node_id = this.basicsForm.id;
     this.gs.deleteNode(node_id);
     this.clearNodeInput();
   }
@@ -75,21 +77,25 @@ export class MongoWriteNodeComponent {
   clearNodeInput() {
     this.nodeEditing = false;
     this.mongoWriteForm.reset();
+    this.nodeBasicsFormReset();
   }
 
-  checkNodeId(): ValidatorFn {
-    return (control: AbstractControl): ValidationErrors | null => {
-      if (control.value) {
-        if (!this.nodeEditing) {
-          if (/[_-\s]/g.test(control.value)) {
-            return { illegalCharacters: true, msg: "Can't contain any _ - or whitespaces" }
-          }
-          if (this.graph.nodes.find(nodo => nodo.id == control.value)) {
-            return { already: true, msg: "Already exists a node with this id" };
-          }
-        }
-      }
-      return null;
+  nodeBasicsValidation(): ValidatorFn {
+    return () => {
+      if (this.basicsForm.valid) return null;
+      else return { basicsInvalid: true };
     }
   }
+
+  nodeBasicsValidationEvent(event: any) {
+    this.basicsForm = event;
+    this.mongoWriteForm.updateValueAndValidity();
+  };
+
+  nodeBasicsFormReset() {
+    this.nodeBasicsId = null;
+    this.nodeBasicsLabel = null;
+    this.nodeBasicsReset = !this.nodeBasicsReset;
+  }
+
 }

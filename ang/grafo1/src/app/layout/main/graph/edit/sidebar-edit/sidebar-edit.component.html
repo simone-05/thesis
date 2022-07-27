@@ -47,7 +47,8 @@
 
         <div *ngIf="view == 'node_task'">
           <form class="d-flex-column" [formGroup]="nodeForm" novalidate>
-            <app-node-basics [parentForm]="nodeForm" [nodeEditing]="nodeEditing"></app-node-basics>
+            <!-- <app-node-basics [forced_change]="nodeBasics_change" [input_id]="output_id" [input_label]="output_label" [nodeEditing]="nodeEditing" (formEmit)="basicsFormCatch($event)"></app-node-basics> -->
+            <app-node-basics (formEmit)="nodeBasicsValidationEvent($event)" [input_id]="nodeBasicsId" [input_label]="nodeBasicsLabel" [form_reset]="nodeBasicsReset" [nodeEditing]="nodeEditing"></app-node-basics>
 
             <div class="accordion text-dark">
               <div class="accordion-item">

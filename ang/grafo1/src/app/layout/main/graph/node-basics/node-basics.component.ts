@@ -1,5 +1,5 @@
-import { BehaviorSubject } from 'rxjs';
-import { Component, Input } from '@angular/core';
+import { BehaviorSubject, Subscription } from 'rxjs';
+import { Component, DoCheck, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
 import { AbstractControl, FormBuilder, FormGroup, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { Graph, GraphEditingService } from '../graph-editing.service';
 
@@ -8,16 +8,45 @@ import { Graph, GraphEditingService } from '../graph-editing.service';
   templateUrl: './node-basics.component.html',
   styleUrls: ['./node-basics.component.scss']
 })
-export class NodeBasicsComponent {
-  @Input() parentForm: FormGroup;
-  @Input() nodeEditing: boolean = false;
+export class NodeBasicsComponent implements OnChanges {
+  basicsForm: FormGroup;
+  @Output() formEmit: EventEmitter<{id: string, label: string|null, valid: boolean}> = new EventEmitter();
+  @Input() nodeEditing: any;
+  @Input() input_id: any;
+  @Input() input_label: any;
+  @Input() form_reset: any;
+  // @Input() forced_change: any;
+  formSubscriber: Subscription;
 
   constructor(private fb: FormBuilder, private gs: GraphEditingService) {
-    this.parentForm = this.fb.group({
+    this.basicsForm = this.fb.group({
       node_id: [null, [Validators.required, this.checkNodeId()]],
       node_label: null,
-      node_type: null,
     });
+
+    this.formSubscriber = this.basicsForm.valueChanges.subscribe(x => {
+      if (x) {
+        this.formEmit.emit({id: this.basicsForm.controls["node_id"].value, label: this.basicsForm.controls["node_label"].value, valid: this.basicsForm.valid})
+      }
+    })
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    this.basicsForm.controls["node_id"].setValue(changes['input_id']?.currentValue);
+    this.basicsForm.controls["node_label"].setValue(changes['input_label']?.currentValue);
+    if (changes["form_reset"]) {
+      this.basicsForm.reset();
+    }
+    // if (this.forced_change == 1) {
+    //   // reset
+    //   this.basicsForm.reset();
+    // }
+
+    // if (this.forced_change == 2) {
+    //   // set
+    //   this.basicsForm.controls["node_id"].setValue(this.input_id);
+    //   this.basicsForm.controls["node_label"].setValue(this.input_label);
+    // }
   }
 
   public get graph(): Graph {

@@ -11,17 +11,21 @@ import { Node, GraphEditingService, Graph, Edge } from '../../graph-editing.serv
   templateUrl: './debug-node.component.html',
   styleUrls: ['./debug-node.component.scss']
 })
-export class DebugNodeComponent implements OnInit, OnDestroy {
+export class DebugNodeComponent implements OnDestroy {
   debugForm: FormGroup;
   nodeEditing: boolean;
+  type: string = "debug";
   node_subscription: Subscription;
+  basicsForm: { id: string, label: string | null, valid: boolean } = { id: "null", label: null, valid: false };
+  nodeBasicsId: any;
+  nodeBasicsLabel: any;
+  nodeBasicsReset: any;
 
   constructor(private fb: FormBuilder, private gs: GraphEditingService, private sb: SidebarEditComponent) {
     this.nodeEditing = false;
     this.debugForm = this.fb.group({
-      node_id: [null, [Validators.required, this.checkNodeId()]],
       node_label: null
-    });
+    }, { validators: this.nodeBasicsValidation() });
 
     this.node_subscription = this.sb.nodeSelected$.subscribe((node: Node) => {
       if (node?.type == "debug") {
@@ -30,17 +34,14 @@ export class DebugNodeComponent implements OnInit, OnDestroy {
     });
   }
 
-  ngOnInit(): void {
-  }
-
   ngOnDestroy(): void {
     this.node_subscription.unsubscribe;
   }
 
   selectedNodeInputChange(node: any) {
     this.nodeEditing = true;
-    this.getControl("node_id").setValue(node.id);
-    this.getControl("node_label").setValue(node.label);
+    this.nodeBasicsId = node.id;
+    this.nodeBasicsLabel = node.label;
   }
 
   get graph(): Graph {
@@ -52,9 +53,9 @@ export class DebugNodeComponent implements OnInit, OnDestroy {
   }
 
   tryNode() {
-    let node_id = this.getControl("node_id").value;
-    let node_label = this.getControl("node_label").value || "";
-    let node: FlowNode = new FlowNode(node_id, node_label, "debug", [], "");
+    let node_id = this.basicsForm.id;
+    let node_label = this.basicsForm.label || "";
+    let node: FlowNode = new FlowNode(node_id, node_label, this.type, [], "");
     if (this.nodeEditing) {
       this.gs.editNode(node);
     } else {
@@ -64,7 +65,7 @@ export class DebugNodeComponent implements OnInit, OnDestroy {
   }
 
   deleteNode() {
-    let node_id = this.getControl("node_id").value;
+    let node_id = this.basicsForm.id;
     this.gs.deleteNode(node_id);
     this.clearNodeInput();
   }
@@ -72,21 +73,24 @@ export class DebugNodeComponent implements OnInit, OnDestroy {
   clearNodeInput() {
     this.nodeEditing = false;
     this.debugForm.reset();
+    this.nodeBasicsFormReset();
   }
 
-  checkNodeId(): ValidatorFn {
-    return (control: AbstractControl): ValidationErrors | null => {
-      if (control.value) {
-        if (!this.nodeEditing) {
-          if (/[_-\s]/g.test(control.value)) {
-            return { illegalCharacters: true, msg: "Can't contain any _ - or whitespaces" }
-          }
-          if (this.graph.nodes.find(nodo => nodo.id == control.value)) {
-            return { already: true, msg: "Already exists a node with this id" };
-          }
-        }
-      }
-      return null;
+  nodeBasicsValidation(): ValidatorFn {
+    return () => {
+      if (this.basicsForm.valid) return null;
+      else return { basicsInvalid: true };
     }
+  }
+
+  nodeBasicsValidationEvent(event: any) {
+    this.basicsForm = event;
+    this.debugForm.updateValueAndValidity();
+  };
+
+  nodeBasicsFormReset() {
+    this.nodeBasicsId = null;
+    this.nodeBasicsLabel = null;
+    this.nodeBasicsReset = !this.nodeBasicsReset;
   }
 }

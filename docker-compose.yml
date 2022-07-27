@@ -4,10 +4,10 @@ services:
     mongo:
         image: mongo
         volumes:
-            - /home/simone/programmi/tiro/mongo/db:/data/db
-            - /home/simone/programmi/tiro/mongo/input_docs-archives:/home/input_docs-archives
+            - ./mongo/db:/data/db
+            - ./mongo/input_docs-archives:/home/input_docs-archives
         ports:
-            - 27017:27017
+            - 8089:27017
         networks:
             graph_net:
 
@@ -34,8 +34,8 @@ services:
 #    angular:
 #        image: nginx:alpine
 #        volumes:
-#            - /home/simone/programmi/tiro/ang/grafo1/dist/grafo1:/usr/share/nginx/html
-#            - /home/simone/programmi/tiro/ang/nginx.conf:/etc/nginx/conf.d/default.conf
+#            - ./ang/grafo1/dist/grafo1:/usr/share/nginx/html
+#            - ./ang/nginx.conf:/etc/nginx/conf.d/default.conf
 #        ports:
 #            - 80:80
 #        networks:

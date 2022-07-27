@@ -1,10 +1,10 @@
-<form class="d-flex-column" [formGroup]="parentForm" novalidate>
+<form class="d-flex-column" [formGroup]="basicsForm" novalidate>
   <div class="form-floating">
     <input class="form-control my-2 " type="text" [formControlName]="'node_id'" placeholder="node id"
-      [ngClass]="{'is-invalid': !parentForm.controls['node_id'].valid}" [readonly]="nodeEditing">
+      [ngClass]="{'is-invalid': !basicsForm.controls['node_id'].valid}" [readonly]="nodeEditing">
     <label>node id</label>
-    <p class="text-danger text-start my-0" *ngIf="parentForm.controls['node_id'].errors">
-    {{parentForm.controls['node_id'].errors?.['msg']}}</p>
+    <p class="text-danger text-start my-0" *ngIf="basicsForm.controls['node_id'].errors">
+    {{basicsForm.controls['node_id'].errors?.['msg']}}</p>
   </div>
   <div class="form-floating">
     <input class="form-control my-2 " type="text" formControlName="node_label" placeholder="node label">

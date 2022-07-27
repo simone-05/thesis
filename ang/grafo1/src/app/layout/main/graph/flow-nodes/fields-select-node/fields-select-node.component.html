@@ -1,6 +1,6 @@
 <div>
   <form class="d-flex-column" [formGroup]="fieldsSelForm" novalidate>
-    <app-node-basics [parentForm]="fieldsSelForm" [nodeEditing]="nodeEditing"></app-node-basics>
+    <app-node-basics (formEmit)="nodeBasicsValidationEvent($event)" [input_id]="nodeBasicsId" [input_label]="nodeBasicsLabel" [form_reset]="nodeBasicsReset" [nodeEditing]="nodeEditing"></app-node-basics>
 
     <div class="node-form-div">
       <hr class="m-2">

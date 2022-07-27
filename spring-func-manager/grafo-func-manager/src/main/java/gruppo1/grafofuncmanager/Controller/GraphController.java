@@ -439,7 +439,7 @@ class GraphController {
                 break;
             case "non_negative":
                 for (int i = 0; i < res.size(); i++) {
-                    res.set(i, NumbersFns.getInstance().isNonNegative(res.get(i))? 1.0:0);
+                    res.set(i, NumbersFns.getInstance().isNonNegative(res.get(i)));
                 }
             default: break;
         }

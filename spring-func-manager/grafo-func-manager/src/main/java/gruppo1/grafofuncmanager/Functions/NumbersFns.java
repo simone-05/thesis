@@ -55,9 +55,9 @@ public class NumbersFns {
         } else return x;
     }
 
-    public Boolean isNonNegative(Double x) {
-        if (x >= 0) return true;
-        return false;
+    public Double isNonNegative(Double x) {
+        if (x >= 0) return x;
+        return 0.0;
     }
 
     public Double getInt(Double x) {
