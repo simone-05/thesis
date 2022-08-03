@@ -1,15 +1,16 @@
-import { SpringService } from './../../../../../shared/services/spring.service';
+import { SpringDbService } from '../../../../../shared/services/spring-db.service';
 import { GraphEditingService, Node, Edge, Graph } from '../../graph-editing.service';
 import { Router } from '@angular/router';
 import { AbstractControl, FormArray, FormBuilder, FormGroup, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
-import { Component, OnInit, EventEmitter, Output, Input, OnChanges, SimpleChanges, OnDestroy } from '@angular/core';
+import { Component, OnInit, EventEmitter, Output, Input, OnChanges, SimpleChanges, OnDestroy, ViewChild } from '@angular/core';
 import { ClusterNode } from '@swimlane/ngx-graph';
 import { BehaviorSubject, Subscription } from 'rxjs';
+import { NodeBasicsComponent } from '../../node-basics/node-basics.component';
 
 @Component({
   selector: 'app-sidebar-edit',
   templateUrl: './sidebar-edit.component.html',
-  styleUrls: ['./sidebar-edit.component.scss']
+  styleUrls: ['./sidebar-edit.component.scss'],
 })
 export class SidebarEditComponent implements OnInit, OnChanges, OnDestroy {
   view: string;
@@ -41,13 +42,16 @@ export class SidebarEditComponent implements OnInit, OnChanges, OnDestroy {
 
   Object = Object;
 
-  basicsForm: { id: string, label: string | null, valid: boolean } = { id: "null", label: null, valid: false };
-  nodeBasicsId: any;
-  nodeBasicsLabel: any;
-  nodeBasicsReset: any;
+  // basicsForm: { id: string, label: string | null, valid: boolean } = { id: "null", label: null, valid: false };
+  // nodeBasicsId: any;
+  // nodeBasicsLabel: any;
+  // nodeBasicsReset: any;
 
-  constructor(public graphEditingService: GraphEditingService, private formBuilder: FormBuilder, private router: Router, private sp: SpringService) {
-    this.view = "node_task";
+  @ViewChild(NodeBasicsComponent) node_basics_comp!: NodeBasicsComponent;
+  save_button_text: string = "Save";
+
+  constructor(public graphEditingService: GraphEditingService, private formBuilder: FormBuilder, private router: Router, private sp: SpringDbService) {
+    this.view = "node_inject";
     this.isCollapsed = true;
     this.nodePropId = 0;
     this.edgePropId = 0;
@@ -200,8 +204,8 @@ export class SidebarEditComponent implements OnInit, OnChanges, OnDestroy {
   tryNode() {
     // let node_id = this.nodeForm.controls["node_id"].value;
     // let node_label = this.nodeForm.controls["node_label"].value || "";
-    let node_id = this.basicsForm.id;
-    let node_label = this.basicsForm.label||"";
+    let node_id = this.node_basics_comp.basicsForm.controls["node_id"].value;
+    let node_label = this.node_basics_comp.basicsForm.controls["node_label"].value||"";
     this.nodeForm.controls['node_type'].setValue(this.view == "node_cond" ? "cond" : "task");
     let node_type = this.nodeForm.controls["node_type"].value;
     let node_data = this.nodeForm.controls["node_data"].value;
@@ -313,7 +317,7 @@ export class SidebarEditComponent implements OnInit, OnChanges, OnDestroy {
 
   deleteNode() {
     // let node_id = this.nodeForm.controls["node_id"].value;
-    let node_id = this.basicsForm.id;
+    let node_id = this.node_basics_comp.basicsForm.controls["node_id"].value;
     this.graphEditingService.deleteNode(node_id);
     this.clearNodeInput();
   }
@@ -352,11 +356,10 @@ export class SidebarEditComponent implements OnInit, OnChanges, OnDestroy {
     this.nodeEditing = false;
     this.nodePropId = 0;
     this.nodeForm.reset();
-
-    this.nodeBasicsId = null;
-    this.nodeBasicsLabel = null;
-    this.nodeBasicsReset = !this.nodeBasicsReset;
-    
+    // this.nodeBasicsId = null;
+    // this.nodeBasicsLabel = null;
+    // this.nodeBasicsReset = !this.nodeBasicsReset;
+    this.node_basics_comp?.basicsForm.reset();
     this.nodeForm.controls["node_data"] = this.formBuilder.array([]);
     // this.nodeDataForm.updateValueAndValidity();
   }
@@ -399,8 +402,10 @@ export class SidebarEditComponent implements OnInit, OnChanges, OnDestroy {
     if (node.type == "task") {
       // Devo ritardare altrimenti più sopra, quando chiamo clearNodeInput(), pulisco il node basics form, ma dopo aver settato qui sotto i suoi valori. Mentre dovrebbe essere il contrario perciò ritardo il setting dei campi
       setTimeout(() => {
-        this.nodeBasicsId = node.id;
-        this.nodeBasicsLabel = node.label;
+        // this.nodeBasicsId = node.id;
+        // this.nodeBasicsLabel = node.label;
+        this.node_basics_comp.basicsForm.controls["node_id"].setValue(node.id);
+        this.node_basics_comp.basicsForm.controls["node_label"].setValue(node.label);
       }, 10);
       this.graph.clusters.forEach(clus => {
         clus.childNodeIds?.forEach(ids => {
@@ -473,6 +478,14 @@ export class SidebarEditComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   saveGraph() {
+    this.graphEditingService.saveGraphInStorage();
+    this.save_button_text = "Saved";
+    setTimeout(() => {
+      this.save_button_text = "Save";
+    }, 1500);
+  }
+
+  saveGraphAndExit() {
     this.graphEditingService.saveGraphInStorage();
     this.router.navigate(["/app/graph/list"]);
   }
@@ -754,13 +767,12 @@ export class SidebarEditComponent implements OnInit, OnChanges, OnDestroy {
 
   nodeBasicsValidation(): ValidatorFn {
     return () => {
-      if (this.basicsForm.valid) return null;
-      else return { basicsInvalid: true };
+      if (!this.node_basics_comp || !this.node_basics_comp.basicsForm.valid) return { basicsInvalid: true };
+      return null;
     }
   }
 
-  nodeBasicsValidationEvent(event: any) {
-    this.basicsForm = event;
+  nodeBasicsValidationEvent() {
     this.nodeForm.updateValueAndValidity();
   };
 

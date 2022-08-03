@@ -11,7 +11,7 @@ import { FuncManagerService } from 'src/app/shared/services/func-manager.service
   templateUrl: './view-edit.component.html',
   styleUrls: ['./view-edit.component.scss']
 })
-export class ViewEditComponent implements OnDestroy {
+export class ViewEditComponent implements OnDestroy, OnChanges {
   nodes: Node[] = [
     // {id: "1", label: 'nodo1', type: "cond"},
     // {id: "2", label: 'nodo2', type: "task"}
@@ -51,6 +51,16 @@ export class ViewEditComponent implements OnDestroy {
         this.updateGraph();
       }
     });
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    switch (changes["update"].currentValue) {
+      case 2:
+        this.center$.next(); break;
+      case 3:
+        this.zoomToFit$.next(); break;
+      default: break;
+    }
   }
 
   ngOnDestroy() {

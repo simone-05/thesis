@@ -1,4 +1,5 @@
 altro
+nohup.out
 
 mongo/db
 mongo/input_docs*

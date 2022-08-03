@@ -1,5 +1,6 @@
+import { Subscription } from 'rxjs';
 import { FlowNode } from './../../../../../shared/flow_nodes-interface';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { AbstractControl, FormBuilder, FormControl, FormGroup, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { SidebarEditComponent } from '../../edit/sidebar-edit/sidebar-edit.component';
 import { Graph, GraphEditingService, Node } from '../../graph-editing.service';
@@ -9,10 +10,11 @@ import { Graph, GraphEditingService, Node } from '../../graph-editing.service';
   templateUrl: './fields-del-node.component.html',
   styleUrls: ['./fields-del-node.component.scss']
 })
-export class FieldsDelNodeComponent implements OnInit {
+export class FieldsDelNodeComponent implements OnDestroy{
   fieldsDelForm: FormGroup;
   nodeEditing: boolean;
   type: string = "fields-del";
+  node_selection: Subscription;
   basicsForm: { id: string, label: string | null, valid: boolean } = { id: "null", label: null, valid: false };
   nodeBasicsId: any;
   nodeBasicsLabel: any;
@@ -25,20 +27,23 @@ export class FieldsDelNodeComponent implements OnInit {
       node_fields: this.fb.array([]),
     }, { validators: this.nodeBasicsValidation() });
 
-    this.sb.nodeSelected$.subscribe((node: Node) => {
+    this.node_selection = this.sb.nodeSelected$.subscribe((node: Node) => {
       if (node?.type == this.type) {
         this.selectedNodeInputChange(node);
       }
     });
   }
 
-  ngOnInit(): void {
+  ngOnDestroy() {
+    this.node_selection.unsubscribe();
   }
 
   selectedNodeInputChange(node: any) {
     this.nodeEditing = true;
-    this.nodeBasicsId = node.id;
-    this.nodeBasicsLabel = node.label;
+    setTimeout(() => {
+      this.nodeBasicsId = node.id;
+      this.nodeBasicsLabel = node.label;
+    }, 10);
     const content = JSON.parse(node.content);
     this.getControl("node_fields").setValue(content["fields"]);
   }

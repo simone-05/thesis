@@ -1,24 +1,24 @@
 <div>
-  <form class="d-flex-column" [formGroup]="mongoWriteForm" novalidate>
-    <app-node-basics (formEmit)="nodeBasicsValidationEvent($event)" [input_id]="nodeBasicsId" [input_label]="nodeBasicsLabel" [form_reset]="nodeBasicsReset" [nodeEditing]="nodeEditing"></app-node-basics>
+  <form class="d-flex-column" [formGroup]="flowNodeForm" novalidate>
+    <app-node-basics (formEmit)="catchBasicsForm($event)" [input_id]="basics_out_id" [input_label]="basics_out_label" [nodeEditing]="nodeEditing"></app-node-basics>
 
     <div class="node-form-div">
       <hr class="m-2">
     </div>
 
     <div class="form-floating">
-      <input class="form-control my-2" type="text" formControlName="node_db" placeholder="Database name" [ngClass]="{'is-invalid': !mongoWriteForm.controls['node_db'].valid}" ngbPopover="Name of the database with the specified collection" popoverClass="custom-popover" triggers="mouseenter:mouseleave" [openDelay]="400">
-      <p class="text-danger text-start my-0" *ngIf="mongoWriteForm.controls['node_db'].errors">{{mongoWriteForm.controls['node_db'].errors?.['msg']}}</p>
+      <input class="form-control my-2" type="text" formControlName="node_db" placeholder="Database name" [ngClass]="{'is-invalid': !flowNodeForm.controls['node_db'].valid}" ngbPopover="Name of the database with the specified collection" popoverClass="custom-popover" triggers="mouseenter:mouseleave" [openDelay]="400">
+      <p class="text-danger text-start my-0" *ngIf="flowNodeForm.controls['node_db'].errors">{{flowNodeForm.controls['node_db'].errors?.['msg']}}</p>
       <label>Database name</label>
     </div>
     <div class="form-floating">
-      <input class="form-control my-2" type="text" formControlName="node_collection" placeholder="Collection name" [ngClass]="{'is-invalid': !mongoWriteForm.controls['node_collection'].valid}" ngbPopover="Name of the collection inside the database" popoverClass="custom-popover" triggers="mouseenter:mouseleave" [openDelay]="400">
-      <p class="text-danger text-start my-0" *ngIf="mongoWriteForm.controls['node_collection'].errors">{{mongoWriteForm.controls['node_collection'].errors?.['msg']}}</p>
+      <input class="form-control my-2" type="text" formControlName="node_collection" placeholder="Collection name" [ngClass]="{'is-invalid': !flowNodeForm.controls['node_collection'].valid}" ngbPopover="Name of the collection inside the database" popoverClass="custom-popover" triggers="mouseenter:mouseleave" [openDelay]="400">
+      <p class="text-danger text-start my-0" *ngIf="flowNodeForm.controls['node_collection'].errors">{{flowNodeForm.controls['node_collection'].errors?.['msg']}}</p>
       <label>Collection name</label>
     </div>
 
     <div class="d-flex">
-      <button class="mt-2 btn btn-primary" [ngClass]="{'disabled': !mongoWriteForm.valid, 'btn-warning': nodeEditing}" type="button" (click)="tryNode()" [innerText]="nodeEditing? 'Edit':'Add'">Add</button>
+      <button class="mt-2 btn btn-primary" [disabled]="!flowNodeForm.valid" [ngClass]="{'btn-warning': nodeEditing}" type="button" (click)="tryNode()" [innerText]="nodeEditing? 'Edit':'Add'">Add</button>
       <button class="ms-3 mt-2 btn btn-danger" *ngIf="nodeEditing" (click)="deleteNode()">Delete</button>
       <button class="ms-auto mt-2 btn btn-secondary" (click)="clearNodeInput()">Clear</button>
     </div>

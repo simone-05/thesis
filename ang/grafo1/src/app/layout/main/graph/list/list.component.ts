@@ -3,7 +3,7 @@ import { FormGroup, FormBuilder } from '@angular/forms';
 import { Component, DoCheck, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { Graph } from '../graph-editing.service';
-import { SpringService } from 'src/app/shared/services/spring.service';
+import { SpringDbService } from 'src/app/shared/services/spring-db.service';
 import { OnChanges } from '@angular/core';
 
 @Component({
@@ -19,7 +19,7 @@ export class ListComponent implements OnDestroy {
   searchFormSubscription: Subscription;
   $graphsList: BehaviorSubject<Graph[]> = new BehaviorSubject<Graph[]>([]);
 
-  constructor(private router: Router, private sp: SpringService, private fb: FormBuilder) {
+  constructor(private router: Router, private sp: SpringDbService, private fb: FormBuilder) {
     this.makeList();
     // for (let index = 0; index < localStorage.length; index++) {
     //   this.graphs.push(

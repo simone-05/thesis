@@ -3,7 +3,7 @@ import { Injectable } from '@angular/core';
 import { ClusterNode, NgxGraphModule } from '@swimlane/ngx-graph';
 import { DatePipe } from '@angular/common';
 import { FlowNode } from 'src/app/shared/flow_nodes-interface';
-import { SpringService } from 'src/app/shared/services/spring.service';
+import { SpringDbService } from 'src/app/shared/services/spring-db.service';
 
 @Injectable({
   providedIn: 'root'
@@ -14,7 +14,7 @@ export class GraphEditingService {
   loaded$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
   nonflow_types: string[] = ["task", "cond", "clus"];
 
-  constructor(private datePipe: DatePipe, private spring: SpringService) { }
+  constructor(private datePipe: DatePipe, private spring: SpringDbService) { }
 
 
   createGraph(graph_name: string, graph_description: string) {

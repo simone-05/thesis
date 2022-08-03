@@ -5,6 +5,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
+import java.util.Map.Entry;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
@@ -22,7 +23,18 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.mongodb.client.MongoClient;
+import com.mongodb.client.MongoClients;
+import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.MongoCollection;
+// import com.mongodb.reactivestreams.client.MongoClient;
+// import com.mongodb.reactivestreams.client.MongoClients;
+// import com.mongodb.reactivestreams.client.MongoDatabase;
+// import com.mongodb.reactivestreams.client.MongoCollection;
+
 import com.google.gson.Gson;
+import com.jayway.jsonpath.JsonPath;
+import com.jayway.jsonpath.JsonPathException;
 
 import gruppo1.grafofuncmanager.Functions.NumbersFns;
 import gruppo1.grafofuncmanager.Functions.StringsFns;
@@ -30,6 +42,7 @@ import gruppo1.grafofuncmanager.Model.Edge;
 import gruppo1.grafofuncmanager.Model.Flownode;
 import gruppo1.grafofuncmanager.Model.Graph;
 
+import org.bson.Document;
 import org.json.JSONArray;
 import org.json.JSONException;
 // import net.minidev.json.JSONObject;
@@ -145,9 +158,10 @@ class GraphController {
     private boolean processNode(Flownode node) {
         try {
             switch (node.getType()) {
-                case "debug":
+            case "debug":
                 if (!node.getInput().isEmpty()) {
-                    sendResponse(node.getInput(), node.getId());
+                    String output = new JSONObject(node.getInput()).getJSONArray("data").toString();
+                    sendResponse(output, node.getId());
                     return true;
                 }
             case "inject":
@@ -202,10 +216,10 @@ class GraphController {
     public void sendResponse(String str, String id) {
         JSONObject obj = new JSONObject();
         obj.put("node_id", id);
-        obj.put("message", new JSONObject(str));
+        obj.put("message", new JSONArray(str));
         this.m.convertAndSend("/topic/debug", obj.toString());
     }
-
+    
     /**
      * Creates an error msg and sends it as debug
      * @param node node went to error
@@ -215,7 +229,10 @@ class GraphController {
     private String nodeError(Flownode node, String error_msg) {
         JSONObject error_json = new JSONObject();
         error_json.put("ERROR", error_msg);
-        sendResponse(error_json.toString(), node.getId());
+        JSONObject obj = new JSONObject();
+        obj.put("node_id", node.getId());
+        obj.put("message", error_json);
+        this.m.convertAndSend("/topic/debug", obj.toString());
         return error_json.toString();
     }
 
@@ -382,115 +399,156 @@ class GraphController {
      * @return
      */
     public boolean numberFunc(Flownode node) {
-        JSONObject input_json = new JSONObject(node.getInput());
+        String data = new JSONObject(node.getInput()).getJSONArray("data").toString();
+        Integer doc_count = new JSONArray(data).length();
+        JSONObject content = new JSONObject(node.getContent());
+        String op = content.getString("operation"); // L'operazione da effettuare
+        // // String sub_op = ""; // Il nome della sub-operazione
+        List<String> fields = new ArrayList<>();
+        for (Object obj : content.getJSONArray("fields")) {
+            fields.add(obj.toString());
+        }
+        
+        // Catch errors for each field: type is not double, the field is not present in all documents
+        for (String field : fields) {
+            List<Double> l;
+            try {
+                l = JsonPath.read(data, "$.[*]."+field);
+            } catch (Exception e) {
+                node.setOutput(nodeError(node, "Field '" + field + "' is not a double"));
+                return false;
+            }
+            if (l.size() != doc_count) {
+                node.setOutput(nodeError(node, "Not every document has the field: '"+field+"'"));
+                return false;
+            }
+        }
+
+        // // Controllo che esista e non sia nullo il campo selezionato, nell'input
+        // String error_field = "";
+        // try {
+        //     for (String field : fields) {
+        //         error_field = field;
+        //         if (input_json.isNull(error_field)) {
+        //             node.setOutput(nodeError(node, "Field: '"+error_field+"' is null or doesn't exist"));
+        //             return false;
+        //         }
+        //         input_fields_values.add(input_json.getDouble(field));
+        //     }
+        // } catch (JSONException je) {
+        //     node.setOutput(nodeError(node, "Field: '"+error_field+"' of specified type not found in input data"));
+        //     return false;
+        // }
+
+        // List<Double> res = new ArrayList<Double>(input_fields_values);
+        
+        switch(op) {
+            case "integer":
+                for (String field : fields) {
+                    for (int i = 0; i < doc_count; i++) {
+                        String doc_path = "$.[" + i + "].";
+                        Double value = JsonPath.read(data, doc_path+field);
+                        data = JsonPath.parse(data).set(doc_path+field, NumbersFns.getInstance().getInt(value)).jsonString();
+                    }
+                }
+                // res = res.stream().map(x -> NumbersFns.getInstance().getInt(x)).collect(Collectors.toList());
+                break;
+            case "round":
+                // res = res.stream().map(x -> NumbersFns.getInstance().round(x, digits)).collect(Collectors.toList());
+                Integer digits = content.getInt("digits");
+                // for (int i = 0; i < res.size(); i++) {
+                //     res.set(i, NumbersFns.getInstance().roundDecimals(res.get(i), digits));
+                // }
+                for (String field : fields) {
+                    for (int i = 0; i < doc_count; i++) {
+                        String doc_path = "$.[" + i + "].";
+                        Double value = JsonPath.read(data, doc_path + field);
+                        data = JsonPath.parse(data).set(doc_path + field, NumbersFns.getInstance().roundDecimals(value, digits)).jsonString();
+                    }
+                }
+                break;
+            case "non_negative":
+                // for (int i = 0; i < res.size(); i++) {
+                //     res.set(i, NumbersFns.getInstance().isNonNegative(res.get(i)));
+                // }
+                for (String field : fields) {
+                    for (int i = 0; i < doc_count; i++) {
+                        String doc_path = "$.[" + i + "].";
+                        Double value = JsonPath.read(data, doc_path + field);
+                        data = JsonPath.parse(data).set(doc_path + field, NumbersFns.getInstance().isNonNegative(value)).jsonString();
+                    }
+                }
+            default: break;
+        }
+
+        // for (int i = 0; i < res.size(); i++) {
+        //     input_json.put(fields.get(i), res.get(i));
+        // }
+        JSONObject output_json = new JSONObject().put("data", new JSONArray(data));
+        node.setOutput(output_json.toString());
+        return true;
+    }
+
+    public boolean fieldsSelectFunc(Flownode node) {
+        String data = new JSONObject(node.getInput()).getJSONArray("data").toString();
+        Integer doc_count = new JSONArray(data).length();
         JSONObject content = new JSONObject(node.getContent());
         String op = content.getString("operation"); // L'operazione da effettuare
         List<String> fields = new ArrayList<>();
         for (Object obj : content.getJSONArray("fields")) {
             fields.add(obj.toString());
         }
-        List<Double> input_fields_values = new ArrayList<>();
-        // String sub_op = ""; // Il nome della sub-operazione
-        String output = ""; // La stringa json che scriveremo come output
-        Integer digits = 0;
 
-        // Controllo che esista e non sia nullo il campo selezionato, nell'input
-        String error_field = "";
-        try {
-            for (String field : fields) {
-                error_field = field;
-                if (input_json.isNull(error_field)) {
-                    node.setOutput(nodeError(node, "Field: '"+error_field+"' is null or doesn't exist"));
-                    return false;
-                }
-                input_fields_values.add(input_json.getDouble(field));
-            }
-        } catch (JSONException je) {
-            node.setOutput(nodeError(node, "Field: '"+error_field+"' of specified type not found in input data"));
-            return false;
-        }
-
-        if (op.equals("trim") || op.equals("round")) {
-            try {
-                digits = content.getInt("digits");
-            } catch (JSONException e) {
-                node.setOutput(nodeError(node, "No digits number specified"));
-                return false;
-            }
-        }
-
-        List<Double> res = new ArrayList<Double>(input_fields_values);
-        
-        switch(op) {
-            case "integer":
-                res = res.stream().map(x -> NumbersFns.getInstance().getInt(x)).collect(Collectors.toList());
-                break;
-            case "trim":
-                // res = res.stream().map(x -> NumbersFns.getInstance().trimDecimals(x, digits)).collect(Collectors.toList());
-                for (int i = 0; i < res.size(); i++) {
-                    res.set(i, NumbersFns.getInstance().trimDecimals(res.get(i), digits));
-                }
-                break;
-            case "round":
-                // res = res.stream().map(x -> NumbersFns.getInstance().round(x, digits)).collect(Collectors.toList());
-                for (int i = 0; i < res.size(); i++) {
-                    res.set(i, NumbersFns.getInstance().roundDecimals(res.get(i), digits));
-                }
-                break;
-            case "non_negative":
-                for (int i = 0; i < res.size(); i++) {
-                    res.set(i, NumbersFns.getInstance().isNonNegative(res.get(i)));
-                }
-            default: break;
-        }
-
-        for (int i = 0; i < res.size(); i++) {
-            input_json.put(fields.get(i), res.get(i));
-        }
-        output = input_json.toString();
-        node.setOutput(output);
-        return true;
-    }
-
-    public boolean fieldsSelectFunc(Flownode node) {
-        final JSONObject input_json = new JSONObject(node.getInput());
-        final JSONObject content_json = new JSONObject(node.getContent());
-        final String op = content_json.getString("operation"); // L'operazione da effettuare
-        final List<String> content_fields_list = new ArrayList<>();
-        for (Object obj : content_json.getJSONArray("fields")) {
-            content_fields_list.add(obj.toString());
-        }
-        JSONObject output_json = input_json; // Il json che scriveremo come output
-        
-        // Controllo che esista il campo selezionato, nell'input
-        for (String field : content_fields_list) {
-            if (!input_json.has(field)) {
-                node.setOutput(nodeError(node, "Field: '" + field + "' doesn't exist"));
+        // Catch errors: every document must have the field
+        for (String field : fields) {
+            List<Object> l = JsonPath.read(data, "$.[*]." + field);
+            if (l.size() != doc_count) {
+                node.setOutput(nodeError(node, "Not every document has the field: '" + field + "'"));
                 return false;
             }
         }
         
         switch (op) {
             case "select":
-                for (Iterator<String> iterator = output_json.keys(); iterator.hasNext(); ) {
-                    String value = iterator.next();
-                    if (!content_fields_list.contains(value)) {
-                        iterator.remove();
+
+                // var newObject = JSON.stringify({
+                //     $..['id', 'name', 'username', 'email']
+                //     $.identies[*].['extern_uid']
+                // });
+
+                for (String field : fields) {
+                    for (int i = 0; i < doc_count; i++) {
+                        String doc_path = "$.[" + i + "].";
+                        // CERCA SU INTERNET COME FILTRARE CAMPI DI UN JSON
+                        // data = JsonPath.parse(data)..jsonString();
                     }
                 }
-                break;
-            case "deselect":
-                for (Iterator<String> iterator = output_json.keys(); iterator.hasNext();) {
-                    String value = iterator.next();
-                    if (content_fields_list.contains(value)) {
-                        iterator.remove();
-                    }
-                }
-                break;
+                return false;
+                
+                // for (int i = 0; i < output_json.length(); i++) {
+                //     for (Iterator<String> iterator = output_json.getJSONObject(i).keys(); iterator.hasNext(); ) {
+                //         String value = iterator.next();
+                //         if (!content_fields_list.contains(value)) {
+                //             iterator.remove();
+                //         }
+                //     }
+                // }
+                // break;
+            // case "deselect":
+            //     for (int i = 0; i < output_json.length(); i++) {
+            //         for (Iterator<String> iterator = output_json.getJSONObject(i).keys(); iterator.hasNext();) {
+            //             String value = iterator.next();
+            //             if (content_fields_list.contains(value)) {
+            //                 iterator.remove();
+            //             }
+            //         }
+            //     }
+            //     break;
             default:
                 break;
         }
 
+        JSONObject output_json = new JSONObject().put("data", new JSONArray(data));
         node.setOutput(output_json.toString());
         return true;
     }
@@ -501,9 +559,32 @@ class GraphController {
         final String collection = content_json.getString("collection");
         JSONObject output_json = new JSONObject(); // Il json che scriveremo come output
         
+        // MongoClient client = MongoClients.create("mongodb://simone:simone@localhost:8090/test");
+        MongoClient client = MongoClients.create("mongodb://localhost:8089");
+        MongoDatabase db = client.getDatabase(database);
+        // Catching empty database (has no collections)
+        if (db.listCollectionNames().into(new ArrayList<>()).size() == 0) {
+            node.setOutput(nodeError(node, "No collections in database: '"+database+"'"));
+            return false;
+        }
+        MongoCollection col = db.getCollection(collection);
+        // Catching empty collection (has no documents)
+        if (col.countDocuments() == 0) {
+            node.setOutput(nodeError(node, "No documents in collection: '"+collection+"'"));
+            return false;
+        }
+        List<Document> docs = new ArrayList<>();
+        col.find().into(docs);
+        for (Document document : docs) {
+            output_json.append("data", document);
+        }
+        // col.find().subscribe(new PrintDocumentSubscriber());
+        
+        // List<Document> databases = mongoClient.listDatabases().into(new ArrayList<>());
+        // databases.forEach(db -> System.out.println(db.toJson()));
 
         node.setOutput(output_json.toString());
-        return false;
+        return true;
     }
 
     public boolean mongoWrite(Flownode node) {

@@ -1,6 +1,6 @@
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
 
-  <a class="navbar-brand ms-4 me-auto" [routerLink]="'/app/graph'">
+  <a class="navbar-brand ms-4 me-auto" [routerLink]="'/app/graph'" ngbTooltip="Go back to the list" [openDelay]="500" tooltipClass="custom-tooltip-light">
     <img class="mx-2" src="../../../assets/images/logo-gray.svg" width="40" alt="logo">
 
     <span class="d-none d-sm-inline mx-3 fs-4 my-grey">App Grafi</span>
@@ -11,7 +11,7 @@
       {{username}}
     </button>
     <ul ngbDropdownMenu class="dropdown-menu dropdown-menu-right" aria-labelledby="userDropdown" class="py-0" style="right: 0">
-      <li><button ngbDropdownItem>User page</button></li>
+      <!-- <li><button ngbDropdownItem>User page</button></li> -->
       <li><button ngbDropdownItem [routerLink]="'/login'">Logout</button></li>
     </ul>
   </div>

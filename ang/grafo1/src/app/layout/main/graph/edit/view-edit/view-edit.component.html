@@ -19,7 +19,7 @@
           <!-- tasks -> red -->
           <rect x="0" y="10" width="100" height="50" rx="10" fill="var(--task-node-body-color)"></rect>
           <rect x="0" y="0" width="100" height="30" rx="10" fill="var(--task-node-header-color)"></rect>
-          <text x="20" y="20" font-size="16" fill="#fff">{{node.id}}</text>
+          <text x="10" y="20" font-size="16" fill="#fff">{{node.id}}</text>
           <!-- <text x="10" y="50" font-size="16" fill="#fff">{{node.label}}</text> -->
           <text x="10" y="50" font-size="16" fill="#fff">props: {{(Object.entries(node.properties)).length}}</text>
         </g>
@@ -79,7 +79,7 @@
           </g>
 
           <!-- Il pulsante di 'injection' -->
-          <g *ngIf="node.type == 'inject'" (click)="injection(nodes, node.id)">
+          <g *ngIf="node.type == 'inject'" (click)="injection(nodes, node.id)" ngbTooltip="Press to inject" container="body">
             <rect x="90" y="10" width="35" height="40" rx="10" fill="#223"></rect>
             <rect x="92" y="16.5" width="25" height="25" rx="5" fill="#223"></rect>
           </g>
@@ -91,10 +91,11 @@
               <div style="width: 200px; height: 200px; background-color: purple;" ngbPopover="Ciao" popoverClass="flownode-popover" triggers="mouseenter:mouseleave" placement="left" container="body">
               </div>
             </foreignObject> -->
-            <text x="20" y="20" font-size="16" fill="#fff"> {{node.id}} </text>
-            <text x="70" y="20" font-size="16" fill="#fff">{{String(node.type).substr(0,3)}}</text>
+            <text x="10" y="20" font-size="16" fill="#fff"> {{node.id}} </text>
+            <!-- <text x="70" y="20" font-size="16" fill="#fff">{{String(node.type).substr(0,3)}}</text> -->
             <!-- <text x="10" y="50" font-size="16" fill="#fff">{{node.label}}</text> -->
-            <text x="10" y="50" font-size="16" fill="#fff">props: {{(Object.entries(node.properties)).length}}</text>
+            <!-- <text x="10" y="50" font-size="16" fill="#fff">props: {{(Object.entries(node.properties)).length}}</text> -->
+            <text x="10" y="50" font-size="16" fill="#fff">{{node.type}}</text>
           </g>
 
         </g>

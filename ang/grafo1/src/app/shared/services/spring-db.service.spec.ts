@@ -1,13 +1,13 @@
 import { TestBed } from '@angular/core/testing';
 
-import { SpringService } from './spring.service';
+import { SpringDbService } from './spring-db.service';
 
 describe('SpringService', () => {
-  let service: SpringService;
+  let service: SpringDbService;
 
   beforeEach(() => {
     TestBed.configureTestingModule({});
-    service = TestBed.inject(SpringService);
+    service = TestBed.inject(SpringDbService);
   });
 
   it('should be created', () => {

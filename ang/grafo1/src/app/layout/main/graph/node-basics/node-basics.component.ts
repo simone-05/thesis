@@ -1,5 +1,5 @@
 import { BehaviorSubject, Subscription } from 'rxjs';
-import { Component, DoCheck, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
+import { Component, DoCheck, EventEmitter, Input, OnChanges, Output, SimpleChanges, OnDestroy } from '@angular/core';
 import { AbstractControl, FormBuilder, FormGroup, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { Graph, GraphEditingService } from '../graph-editing.service';
 
@@ -8,14 +8,12 @@ import { Graph, GraphEditingService } from '../graph-editing.service';
   templateUrl: './node-basics.component.html',
   styleUrls: ['./node-basics.component.scss']
 })
-export class NodeBasicsComponent implements OnChanges {
+export class NodeBasicsComponent implements OnChanges, OnDestroy {
   basicsForm: FormGroup;
   @Output() formEmit: EventEmitter<{id: string, label: string|null, valid: boolean}> = new EventEmitter();
-  @Input() nodeEditing: any;
-  @Input() input_id: any;
-  @Input() input_label: any;
-  @Input() form_reset: any;
-  // @Input() forced_change: any;
+  @Input() nodeEditing: boolean = false;
+  @Input() input_id: string|null = null;
+  @Input() input_label: string|null = null;
   formSubscriber: Subscription;
 
   constructor(private fb: FormBuilder, private gs: GraphEditingService) {
@@ -25,32 +23,29 @@ export class NodeBasicsComponent implements OnChanges {
     });
 
     this.formSubscriber = this.basicsForm.valueChanges.subscribe(x => {
-      if (x) {
-        this.formEmit.emit({id: this.basicsForm.controls["node_id"].value, label: this.basicsForm.controls["node_label"].value, valid: this.basicsForm.valid})
-      }
-    })
+      this.formEmit.emit({id: this.basicsForm.controls["node_id"].value, label: this.basicsForm.controls["node_label"].value, valid: this.basicsForm.valid})
+    });
+  }
+
+  ngOnDestroy(): void {
+      this.formSubscriber.unsubscribe();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    this.basicsForm.controls["node_id"].setValue(changes['input_id']?.currentValue);
-    this.basicsForm.controls["node_label"].setValue(changes['input_label']?.currentValue);
-    if (changes["form_reset"]) {
-      this.basicsForm.reset();
+    if (changes["input_id"]) {
+      this.basicsForm.controls["node_id"].setValue(changes['input_id'].currentValue);
     }
-    // if (this.forced_change == 1) {
-    //   // reset
-    //   this.basicsForm.reset();
-    // }
-
-    // if (this.forced_change == 2) {
-    //   // set
-    //   this.basicsForm.controls["node_id"].setValue(this.input_id);
-    //   this.basicsForm.controls["node_label"].setValue(this.input_label);
-    // }
+    if (changes["input_label"]) {
+      this.basicsForm.controls["node_label"].setValue(changes['input_label'].currentValue);
+    }
   }
 
   public get graph(): Graph {
     return this.gs.graph;
+  }
+
+  public getControl(value: string): AbstractControl {
+    return this.basicsForm.controls[value];
   }
 
   checkNodeId(): ValidatorFn {

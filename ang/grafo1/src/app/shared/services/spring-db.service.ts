@@ -6,7 +6,7 @@ import { Observable } from 'rxjs';
 @Injectable({
   providedIn: 'root'
 })
-export class SpringService {
+export class SpringDbService {
   baseUrl = "http://localhost:8090/api/graphs";
   headers = { headers: { "Content-Type": "application/json" } };
 

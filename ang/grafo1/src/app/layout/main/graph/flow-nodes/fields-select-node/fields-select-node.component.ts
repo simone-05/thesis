@@ -1,101 +1,85 @@
 import { Graph, GraphEditingService } from 'src/app/layout/main/graph/graph-editing.service';
-import { Component, OnDestroy, OnInit } from '@angular/core';
-import { AbstractControl, FormBuilder, FormGroup, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
+import { Component, DoCheck, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { AbstractControl, FormArray, FormBuilder, FormControl, FormGroup, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { SidebarEditComponent } from '../../edit/sidebar-edit/sidebar-edit.component';
 import { Node } from 'src/app/layout/main/graph/graph-editing.service';
 import { FlowNode } from 'src/app/shared/flow_nodes-interface';
 import { Subscription } from 'rxjs';
+import { NodeBasicsComponent } from '../../node-basics/node-basics.component';
+import { FlowNodesComponent } from '../flow-nodes.component';
 
 @Component({
   selector: 'app-fields-select-node',
   templateUrl: './fields-select-node.component.html',
   styleUrls: ['./fields-select-node.component.scss']
 })
-export class FieldsSelectNodeComponent {
-  fieldsSelForm: FormGroup;
-  nodeEditing: boolean;
-  type: string = "fields-sel";
-  basicsForm: { id: string, label: string | null, valid: boolean } = { id: "null", label: null, valid: false };
-  nodeBasicsId: any;
-  nodeBasicsLabel: any;
-  nodeBasicsReset: any;
+export class FieldsSelectNodeComponent extends FlowNodesComponent implements OnDestroy {
+  isCollapsed: boolean = true;
 
-  constructor(private fb: FormBuilder, private gs: GraphEditingService, private sb: SidebarEditComponent) {
-    this.nodeEditing = false;
-    this.fieldsSelForm = this.fb.group({
-      node_operation: [null, Validators.required],
-      node_fields: [null, Validators.required],
-    }, { validators: this.nodeBasicsValidation() });
+  constructor(protected fb: FormBuilder, protected gs: GraphEditingService, protected sb: SidebarEditComponent) {
+    super(fb, gs, sb, "fields-sel", new FormGroup({
+      node_operation: new FormControl(null, Validators.required),
+      node_fields: new FormArray([], Validators.required),
+    }));
+  }
 
-    this.sb.nodeSelected$.subscribe((node: Node) => {
-      if (node?.type == this.type) {
-        this.selectedNodeInputChange(node);
-      }
-    });
+  ngOnDestroy(): void {
+    super.ngOnDestroy();
   }
 
   selectedNodeInputChange(node: any) {
-    this.nodeEditing = true;
-    this.nodeBasicsId = node.id;
-    this.nodeBasicsLabel = node.label;
+    super.selectedNodeInputChange(node);
     const content = JSON.parse(node.content);
     this.getControl("node_operation").setValue(content["operation"]);
-    this.getControl("node_fields").setValue(content["fields"]);
+    // this.getControl("node_fields").setValue(content["fields"]);
+    this.flowNodeForm.controls["node_fields"] = new FormArray([], Validators.required);
+    content["fields"].forEach((x: string) => {
+      this.addField(x);
+    });
+    this.flowNodeForm.updateValueAndValidity(); //NECESSARIO
   }
 
-  get graph(): Graph {
-    return this.gs.graph;
-  }
-
-  getControl(x: string) {
-    return this.fieldsSelForm.controls[x];
+  get fieldsForm(): FormArray {
+    return this.getControl("node_fields") as FormArray;
   }
 
   tryNode() {
-    let node_id = this.basicsForm.id;
-    let node_label = this.basicsForm.label || "";
+    let node = this.retrieveNodeBasics();
     let operation = this.getControl("node_operation").value;
-    let fields: string[] = this.getControl("node_fields").value.toString().split(",").map((x: string) => x.trim()).filter((x: string) => x);
+    // let fields: string[] = this.getControl("node_fields").value.toString().split(",").map((x: string) => x.trim()).filter((x: string) => x);
+    let fields: string[] = this.fieldsForm.value.map((x: { field: string }) => x.field);
     let node_content = JSON.stringify({
       "operation": operation,
       "fields": fields,
     });
-    let node: FlowNode = new FlowNode(node_id, node_label, this.type, [], node_content);
-    if (this.nodeEditing) {
-      this.gs.editNode(node);
-    } else {
-      this.gs.addNode(node);
-    }
-    this.clearNodeInput();
-  }
-
-  deleteNode() {
-    let node_id = this.basicsForm.id;
-    this.gs.deleteNode(node_id);
-    this.clearNodeInput();
+    this.writeNode(node, node_content);
   }
 
   clearNodeInput() {
-    this.nodeEditing = false;
-    this.fieldsSelForm.reset();
-    this.nodeBasicsFormReset();
+    super.clearNodeInput();
+    this.flowNodeForm.controls["node_fields"] = this.fb.array([], Validators.required);
   }
 
-  nodeBasicsValidation(): ValidatorFn {
-    return () => {
-      if (this.basicsForm.valid) return null;
-      else return { basicsInvalid: true };
+  addField(field_name?: string) {
+    const dato = this.fb.group({
+      field: [(field_name) ? field_name : null, [Validators.required, this.checkField()]]
+    });
+    this.fieldsForm.push(dato);
+  }
+
+  removeField(i: number) {
+    this.fieldsForm.removeAt(i);
+    this.flowNodeForm.updateValueAndValidity(); //NECESSARIO
+  }
+
+  checkField(): ValidatorFn {
+    return (control) => {
+      if (control.value) {
+        if (this.fieldsForm.value.find((element: { field: string }) => element.field == control.value) && control.dirty) {
+          return { already: true, msg: "Field already selected" };
+        }
+      }
+      return null;
     }
-  }
-
-  nodeBasicsValidationEvent(event: any) {
-    this.basicsForm = event;
-    this.fieldsSelForm.updateValueAndValidity();
-  };
-
-  nodeBasicsFormReset() {
-    this.nodeBasicsId = null;
-    this.nodeBasicsLabel = null;
-    this.nodeBasicsReset = !this.nodeBasicsReset;
   }
 }

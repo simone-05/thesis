@@ -1,6 +1,6 @@
 <div>
   <form class="d-flex-column" [formGroup]="fieldsDelForm" novalidate>
-    <app-node-basics (formEmit)="nodeBasicsValidationEvent($event)" [input_id]="nodeBasicsId" [input_label]="nodeBasicsLabel" [form_reset]="nodeBasicsReset" [nodeEditing]="nodeEditing"></app-node-basics>
+    <app-node-basics (formEmit)="nodeBasicsValidationEvent($event)" [input_id]="nodeBasicsId" [input_label]="nodeBasicsLabel" [nodeEditing]="nodeEditing"></app-node-basics>
 
     <div class="node-form-div">
       <hr class="m-2">
@@ -10,7 +10,7 @@
     <p class="text-danger text-start my-0" *ngIf="fieldsDelForm.controls['node_field'].errors">{{fieldsDelForm.controls['node_field'].errors?.['msg']}}</p>
 
     <div class="d-flex">
-      <button class="mt-2 btn btn-primary" [ngClass]="{'disabled': !fieldsDelForm.valid, 'btn-warning': nodeEditing}" type="button" (click)="tryNode()" [innerText]="nodeEditing? 'Edit':'Add'">Add</button>
+      <button class="mt-2 btn btn-primary" [disabled]="!fieldsDelForm.valid" [ngClass]="{'btn-warning': nodeEditing}" type="button" (click)="tryNode()" [innerText]="nodeEditing? 'Edit':'Add'">Add</button>
       <button class="ms-3 mt-2 btn btn-danger" *ngIf="nodeEditing" (click)="deleteNode()">Delete</button>
       <button class="ms-auto mt-2 btn btn-secondary" (click)="clearNodeInput()">Clear</button>
     </div>

@@ -1,9 +1,9 @@
 <div class="row mx-3" [ngStyle]="{'height': getSidebarHeight()}">
-  <div class="col-12" [ngStyle]="{'max-height': getSidebarFormHeight(), 'overflow-y': 'auto'}">
+  <div class="col-12" [ngStyle]="{'max-height': getSidebarFormHeight(), 'overflow-y': 'auto', 'overflow-x': 'clip'}">
 
     <div class="d-flex align-items-center">
       <h3 class="ms-1 my-3 text-white" style="overflow-x: auto;">{{graphEditingService.graph.name}}</h3>
-        <button class="btn btn-sm align-self-center btn-danger ms-auto" (click)="start_over()" title="Delete all nodes and edges">Start over</button>
+        <button class="btn btn-sm align-self-center btn-custom-soft-red ms-auto" (click)="start_over()" ngbTooltip="Delete all nodes and edges" tooltipClass="custom-tooltip-light" placement="bottom">Start over</button>
     </div>
 
       <div class="col-12 d-flex align-items-center">
@@ -40,7 +40,7 @@
           </div>
 
           <button class="mt-2 w-50 btn btn-primary"
-            [ngClass]="{'disabled': !editGraphForm.controls['graph_name'].valid}"
+            [disabled]="!editGraphForm.controls['graph_name'].valid"
             type="button" (click)="editGraph()">Save</button>
         </form>
       </div>
@@ -48,7 +48,8 @@
         <div *ngIf="view == 'node_task'">
           <form class="d-flex-column" [formGroup]="nodeForm" novalidate>
             <!-- <app-node-basics [forced_change]="nodeBasics_change" [input_id]="output_id" [input_label]="output_label" [nodeEditing]="nodeEditing" (formEmit)="basicsFormCatch($event)"></app-node-basics> -->
-            <app-node-basics (formEmit)="nodeBasicsValidationEvent($event)" [input_id]="nodeBasicsId" [input_label]="nodeBasicsLabel" [form_reset]="nodeBasicsReset" [nodeEditing]="nodeEditing"></app-node-basics>
+
+            <app-node-basics (formEmit)="nodeBasicsValidationEvent()" [nodeEditing]="nodeEditing"></app-node-basics>
 
             <div class="accordion text-dark">
               <div class="accordion-item">
@@ -97,7 +98,7 @@
 
             <div class="d-flex">
               <button class="mt-2 btn btn-primary"
-                [ngClass]="{'disabled': !nodeForm.valid || !nodeForm.get('node_data')?.valid, 'btn-warning': nodeEditing}"
+                [ngClass]="{'btn-warning': nodeEditing}" [disabled]="!nodeForm.valid || !nodeForm.get('node_data')?.valid"
                 type="button" (click)="tryNode()" [innerText]="nodeEditing? 'Edit':'Add'">Add</button>
               <button class="ms-3 mt-2 btn btn-danger" *ngIf="nodeEditing" (click)="deleteNode()">Delete</button>
               <button class="ms-auto mt-2 btn btn-secondary" (click)="clearNodeInput()">Clear</button>
@@ -188,7 +189,7 @@
 
             <div class="d-flex">
               <button class="mt-2 btn btn-primary"
-                [ngClass]="{'disabled': !condForm.controls['cond_data'].valid || !condForm.controls['cond_target'].valid, 'btn-warning': nodeEditing}"
+                [ngClass]="{'btn-warning': nodeEditing}" [disabled]="!condForm.controls['cond_data'].valid || !condForm.controls['cond_target'].valid"
                 type="button" (click)="tryCond()" [innerText]="nodeEditing? 'Edit':'Add'">Add</button>
               <button class="ms-3 mt-2 btn btn-danger" *ngIf="nodeEditing" (click)="deleteCond()">Delete</button>
               <button class="ms-auto mt-2 btn btn-secondary" (click)="clearCondInput()">Clear</button>
@@ -238,7 +239,7 @@
             </div>
 
           <div class="d-flex">
-            <button class="mt-2 btn btn-primary" [ngClass]="{'disabled': !edgeForm.valid, 'btn-warning': edgeEditing}" type="button" (click)="tryEdge()" [innerText]="edgeEditing ? 'Edit':'Add'">Add</button>
+            <button class="mt-2 btn btn-primary" [ngClass]="{'btn-warning': edgeEditing}" [disabled]="!edgeForm.valid" type="button" (click)="tryEdge()" [innerText]="edgeEditing ? 'Edit':'Add'">Add</button>
             <button class="ms-3 mt-2 btn btn-danger" *ngIf="edgeEditing" (click)="deleteEdge()">Delete</button>
             <button class="ms-auto mt-2 btn btn-secondary" (click)="clearEdgeInput()">Clear</button>
           </div>
@@ -283,10 +284,13 @@
 
   <div id="BottomSidebarForm" class="mt-auto pt-3">
     <!-- Metto l'id per poterlo trovare per ottenere la sua altezza -->
-    <div class="col-12">
-      <button class="btn btn-success w-100" (click)="saveGraph()">Save Graph</button>
+    <div class="btn-group d-flex flex-fill gap-1" role="group">
+      <!-- <div class="row"> -->
+      <button class="btn btn-success" (click)="saveGraph()">{{save_button_text}}</button>
+      <button class="btn btn-success" (click)="saveGraphAndExit()">Save and exit</button>
+      <!-- </div> -->
     </div>
-    <div class=" d-flex gap-2 my-3 justify-content-evenly">
+    <div class=" d-flex gap-2 my-3 justify-content-around">
       <button class="btn btn-sm btn-secondary" (click)="centerGraph()">Center graph</button>
       <button class="btn btn-sm btn-secondary" (click)="fitGraph()">Zoom to fit</button>
     </div>

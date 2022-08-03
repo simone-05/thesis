@@ -1,16 +1,17 @@
 import { GraphEditingService, Node, Edge } from '../graph-editing.service';
 import { Router } from '@angular/router';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Component, OnInit, EventEmitter, Output, Input } from '@angular/core';
+import { Component, OnInit, EventEmitter, Output, Input, AfterViewInit } from '@angular/core';
 import { ClusterNode } from '@swimlane/ngx-graph';
-import { SpringService } from 'src/app/shared/services/spring.service';
+import { SpringDbService } from 'src/app/shared/services/spring-db.service';
 
 @Component({
   selector: 'app-create',
   templateUrl: './create.component.html',
   styleUrls: ['./create.component.scss']
 })
-export class CreateComponent implements OnInit {
+export class CreateComponent {
+  sidebarHeight: any;
 
   isCreated: boolean;
 
@@ -26,7 +27,7 @@ export class CreateComponent implements OnInit {
 
   Object = Object;
 
-  constructor(public graphEditingService: GraphEditingService, private formBuilder: FormBuilder, private router: Router, private sp: SpringService) {
+  constructor(public graphEditingService: GraphEditingService, private formBuilder: FormBuilder, private router: Router, private sp: SpringDbService) {
     this.isCreated = false;
     this.graphEditingService.clearGraph(); //preparo un grafo vuoto
 
@@ -34,9 +35,8 @@ export class CreateComponent implements OnInit {
       graph_name: ["", Validators.required],
       graph_desc: ["", Validators.required]
     });
-  }
 
-  ngOnInit(): void {
+    this.sidebarHeight = this.getSidebarHeight();
   }
 
   getSidebarHeight(): string {
@@ -53,8 +53,8 @@ export class CreateComponent implements OnInit {
       this.sp.checkGraphExists(new_name).subscribe((found) => {
         this.graphNameAlready = found;
         this.graphSearching = false;
-      })
-    }
+      });
+    };
   }
 
   tryCreate() {

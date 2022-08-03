@@ -1,9 +1,9 @@
 <div>
-  <form class="d-flex-column" [formGroup]="debugForm" novalidate>
-    <app-node-basics (formEmit)="nodeBasicsValidationEvent($event)" [input_id]="nodeBasicsId" [input_label]="nodeBasicsLabel" [form_reset]="nodeBasicsReset" [nodeEditing]="nodeEditing"></app-node-basics>
+  <form class="d-flex-column" [formGroup]="flowNodeForm" novalidate>
+    <app-node-basics (formEmit)="catchBasicsForm($event)" [input_id]="basics_out_id" [input_label]="basics_out_label" [nodeEditing]="nodeEditing"></app-node-basics>
 
     <div class="d-flex">
-      <button class="mt-2 btn btn-primary" [ngClass]="{'disabled': !debugForm.valid, 'btn-warning': nodeEditing}" type="button" (click)="tryNode()" [innerText]="nodeEditing? 'Edit':'Add'">Add</button>
+      <button class="mt-2 btn btn-primary" [ngClass]="{'btn-warning': nodeEditing}" [disabled]="!flowNodeForm.valid" type="button" (click)="tryNode()" [innerText]="nodeEditing? 'Edit':'Add'">Add</button>
       <button class="ms-3 mt-2 btn btn-danger" *ngIf="nodeEditing" (click)="deleteNode()">Delete</button>
       <button class="ms-auto mt-2 btn btn-secondary" (click)="clearNodeInput()">Clear</button>
     </div>
