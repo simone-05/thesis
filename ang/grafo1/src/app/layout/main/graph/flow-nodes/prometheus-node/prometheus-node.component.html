@@ -1,0 +1,59 @@
+<div>
+  <form class="d-flex-column" [formGroup]="flowNodeForm" novalidate>
+    <app-node-basics (formEmit)="catchBasicsForm($event)" [input_id]="basics_out_id" [input_label]="basics_out_label" [nodeEditing]="nodeEditing"></app-node-basics>
+
+    <div class="node-form-div">
+      <hr class="m-2">
+    </div>
+
+    <div class="form-floating">
+      <select formControlName="node_metric_type" class="my-2 form-select my-bg-grey" [ngClass]="{'is-invalid': !flowNodeForm.controls['node_metric_type'].valid}" ngbPopover="Type of the new metric in prometheus" popoverClass="custom-popover" triggers="mouseenter:mouseleave" [openDelay]="400">
+        <option value="counter">Counter</option>
+        <option value="gauge">Gauge</option>
+        <option value="histogram">Histogram</option>
+        <option value="summary">Summary</option>
+      </select>
+      <label>Metric</label>
+      <p class="text-danger text-start my-0" *ngIf="flowNodeForm.controls['node_metric_type'].errors">{{getControl('node_metric_type').errors?.['msg']}}</p>
+    </div>
+    <div class="accordion text-dark">
+      <div class="accordion-item">
+        <div class="accordion-header px-3 btn col-12 d-flex align-items-center" (click)="collapse.toggle()"
+          [attr.aria-expanded]="!isCollapsed">
+          Fields
+          <button class="ms-auto bg-white" style="border-width: 0">
+            <img *ngIf="isCollapsed" src="../../../../../../assets/images/chevron-down.svg" alt="expand">
+            <img *ngIf="!isCollapsed" src="../../../../../../assets/images/chevron-up.svg" alt="collapse">
+          </button>
+        </div>
+        <div #collapse="ngbCollapse" [(ngbCollapse)]="isCollapsed">
+          <div formArrayName="node_fields">
+            <div class="row pb-2 px-4 align-items-center" *ngFor="let item of fieldsForm.controls; let i=index" [formGroupName]="i">
+              <div class="col-10 p-0 ps-2 pe-1" style="overflow-x: auto">
+                <input type="text" class="form-control" formControlName="field" placeholder="field name" (input)="flowNodeForm.updateValueAndValidity()" [ngClass]="{'is-invalid': !fieldsForm.get(i+'.field')?.valid}">
+              </div>
+              <div class="col-2 p-1 pt-1 btn btn-danger" *ngIf="item" (click)="removeField(i)">
+                <img src="../../../../../../assets/images/x-white.svg" alt="Delete field" width="24">
+              </div>
+              <small class="text-danger text-start my-0" *ngIf="!fieldsForm.get(i+'.field')?.valid">{{fieldsForm.get(i+'.field')?.errors?.['msg']}}</small>
+            </div>
+          </div>
+          <div *ngIf="fieldsForm?.value.length == 0" class="row px-4 pb-2 text-center">
+            <p class="m-0" style="color: #666">no fields</p>
+          </div>
+          <div class="col-12 ps-3 pb-3 btn d-flex align-items-center" (click)="addField()">
+            <img src="../../../../../../assets/images/plus-dark.svg" alt="Add field">
+            <p class="m-0 ms-1" style="color: #666">Add field</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <div class="d-flex">
+      <button class="mt-2 btn btn-primary" [disabled]="!flowNodeForm.valid" [ngClass]="{'btn-warning': nodeEditing}" type="button" (click)="tryNode()" [innerText]="nodeEditing? 'Edit':'Add'">Add</button>
+      <button class="ms-3 mt-2 btn btn-danger" *ngIf="nodeEditing" (click)="deleteNode()">Delete</button>
+      <button class="ms-auto mt-2 btn btn-secondary" (click)="clearNodeInput()">Clear</button>
+    </div>
+  </form>
+</div>

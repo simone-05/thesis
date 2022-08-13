@@ -1,6 +1,7 @@
 package gruppo1.grafofuncmanager.Functions;
 
 import java.text.DecimalFormat;
+import java.util.List;
 
 /**
  * NumbersFunctions
@@ -65,4 +66,42 @@ public class NumbersFns {
         double res = intero;
         return res;
     }
+
+    public Double max(List<Double> x) {
+        Double max = x.get(0);
+        for (int i=1;i<x.size();i++){
+            if(x.get(i)>x.get(i-1)) {
+                max = x.get(i);
+            }
+        }
+        return max;
+    }
+
+    public Double min(List<Double> x) {
+        Double min = x.get(0);
+        for (int i=1;i<x.size();i++){
+            if(x.get(i)<x.get(i-1)) {
+                min = x.get(i);
+            }
+        }
+        return min;
+    }
+
+    public Double sum(List<Double> x) {
+        Double sum = x.get(0);
+        for (int i=1;i<x.size();i++){
+            sum += x.get(i);
+        }
+        return sum;
+    }
+
+    public Double avg(List<Double> x) {
+        Double sum = sum(x);
+        return sum/x.size();
+    }
+
+    public Integer count(List<Double> x) {
+        return x.size();
+    }
+
 }

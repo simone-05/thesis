@@ -21,6 +21,8 @@ import { NumberOpsNodeComponent } from './flow-nodes/number-ops-node/number-ops-
 import { FieldsSelectNodeComponent } from './flow-nodes/fields-select-node/fields-select-node.component';
 import { MongoImportNodeComponent } from './flow-nodes/mongo-import-node/mongo-import-node.component';
 import { MongoWriteNodeComponent } from './flow-nodes/mongo-write-node/mongo-write-node.component';
+import { NumberAggNodeComponent } from './flow-nodes/number-agg-node/number-agg-node.component';
+import { PrometheusNodeComponent } from './flow-nodes/prometheus-node/prometheus-node.component';
 
 
 @NgModule({
@@ -39,7 +41,9 @@ import { MongoWriteNodeComponent } from './flow-nodes/mongo-write-node/mongo-wri
     NumberOpsNodeComponent,
     FieldsSelectNodeComponent,
     MongoImportNodeComponent,
-    MongoWriteNodeComponent
+    MongoWriteNodeComponent,
+    NumberAggNodeComponent,
+    PrometheusNodeComponent
   ],
   imports: [
     CommonModule,

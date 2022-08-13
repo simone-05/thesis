@@ -18,9 +18,11 @@
             <option value="node_debug">Node Debug</option>
             <option value="node_string-ops">Node String Operations</option>
             <option value="node_number-ops">Node Number Operations</option>
+            <option value="node_number-agg">Node Number Aggregation</option>
             <option value="node_fields-sel">Node fields selection</option>
             <option value="node_mongo-in">Import from mongodb</option>
             <option value="node_mongo-out">Write to mongodb</option>
+            <option value="node_prometheus">Node prometheus metric</option>
             <!-- <option value="node_fields-del">Node Fields Deletion</option> -->
           </optgroup>
         </select>
@@ -272,6 +274,14 @@
 
         <div *ngIf="view == 'node_mongo-out'">
           <app-mongo-write-node></app-mongo-write-node>
+        </div>
+
+        <div *ngIf="view == 'node_number-agg'">
+          <app-number-agg-node></app-number-agg-node>
+        </div>
+
+        <div *ngIf="view == 'node_prometheus'">
+          <app-prometheus-node></app-prometheus-node>
         </div>
 
         <!-- <div *ngIf="view == 'node_fields-del'">

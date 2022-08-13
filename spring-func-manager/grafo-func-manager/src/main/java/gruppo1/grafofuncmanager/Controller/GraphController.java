@@ -5,6 +5,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -33,6 +34,8 @@ import com.mongodb.client.MongoCollection;
 // import com.mongodb.reactivestreams.client.MongoCollection;
 
 import com.google.gson.Gson;
+import com.jayway.jsonpath.DocumentContext;
+import com.jayway.jsonpath.InvalidPathException;
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.JsonPathException;
 
@@ -41,6 +44,8 @@ import gruppo1.grafofuncmanager.Functions.StringsFns;
 import gruppo1.grafofuncmanager.Model.Edge;
 import gruppo1.grafofuncmanager.Model.Flownode;
 import gruppo1.grafofuncmanager.Model.Graph;
+import gruppo1.grafofuncmanager.Prom;
+import io.prometheus.client.Counter;
 
 import org.bson.Document;
 import org.json.JSONArray;
@@ -171,14 +176,18 @@ class GraphController {
                 return stringFunc(node);
             case "number-ops":
                 return numberFunc(node);
+            case "number-agg":
+                return numberAgg(node);
             case "fields-sel":
                 return fieldsSelectFunc(node);
+            // case "fields-del":
+            //     return deleteFields(node);
             case "mongo-in":
                 return mongoImport(node);
             case "mongo-out":
                 return mongoWrite(node);
-            // case "fields-del":
-            //     return deleteFields(node);
+            case "prometheus":
+                return prometheus(node);
             default:
                 node.setOutput(nodeError(node, "Unknown node type"));
                 return false;
@@ -236,29 +245,68 @@ class GraphController {
         return error_json.toString();
     }
 
-    /**
-     * Funzione custom per safely select a field from given json
-     * @param obj il json su cui operare
-     * @param key il campo da selezionare
-     * @return Il value del campo selezionato
-     */
-    public String selectField(JSONObject obj, String key) {
-        String value = "";
+    private String setSingleValues(String path, JSONArray new_values, String data) {
+        int asterisk = -1;
+        for (int i=1;i<path.length();i++) {
+            if (path.charAt(i-1) == '[' && path.charAt(i) == '*') {
+                asterisk = i;
+            }
+        }
 
-        try {
-            if (obj == null) {
-                System.out.println("json is null");
+        if (asterisk == -1) return "";
+        for (int j = 0; j < new_values.length(); j++) {
+            String cur_path = (path.substring(0, asterisk) + j + path.substring(asterisk + 1, path.length()));
+            try {
+                data = JsonPath.parse(data).set(cur_path, new_values.get(j)).jsonString();
+            } catch (com.jayway.jsonpath.PathNotFoundException e) {
+                System.out.println("Path non trovato");
+                e.printStackTrace();
+                continue;
             }
-            if (!obj.has(key)) {
-                System.out.println("json does not contain "+key);
-            } else {
-                value = obj.getString(key);
+        }
+        return data;
+    }
+
+    /**
+     * Funzione per processare un JsonPath path, con la sua sintassi, e ottenere una lista dei singoli path fino alle chiavi, ad esempio $.[2-4].a otteniamo ["$.[2].a", "$.[3].a"]
+     * @param query la stringa immessa nel campo 'field' dei nodi
+     * @param data il json array della chiave 'data' dell'input come stringa
+     * @return L'array con i vari path alle chiavi singoli
+     */
+    private List<String> jsonQuery(String data, String query) {
+        List<String> res = new ArrayList<>();
+        Integer paths_count = 0;
+
+        if (JsonPath.read(data, query).toString().charAt(0) != '[') {
+            // Un solo campo
+            res.add(query);
+        } else {
+            // Sono più campi
+            net.minidev.json.JSONArray json_values = JsonPath.read(data, query);
+            paths_count = json_values.size(); //per controllare se il numero coincide dopo
+            Object[] values = json_values.toArray(); //per controllare se i valori sono giusti
+
+            List<String> path_list = new ArrayList<String>();
+            String[] s = query.split("[.]");
+            for (int i = 0; i < s.length; i++) {
+                path_list.add(s[i]);
             }
-        } catch (Exception e) {
-            System.out.println("ERRORE selectField(): "+e);
+            for (int i = 0; i < path_list.size(); i++) {
+                String path_piece = path_list.get(i);
+                Pattern pattern = Pattern.compile("^\\w|\\[\\?|\\[\"|\\[\\d\\]|\\[-\\d\\]");
+                Matcher matcher = pattern.matcher(path_piece);
+                while (matcher.find()) {
+                    path_list.remove(path_piece);
+                }
+            }
+            for (int i=0;i<path_list.size();i++) {
+                int index = query.indexOf(path_list.get(i));
+                String single_path = query.substring(0, index+(path_list.get(i).length()));
+                System.out.println(single_path); //mostra il path fino al primo array
+            }
         }
         
-        return value;
+        return res;
     }
 
     /**
@@ -267,44 +315,37 @@ class GraphController {
      * @return il dato/messaggio processato
      */
     public boolean stringFunc(Flownode node) {
-        JSONObject input_json = new JSONObject(node.getInput());
+        String data = new JSONObject(node.getInput()).getJSONArray("data").toString();
+        Integer doc_count = new JSONArray(data).length();
         JSONObject content = new JSONObject(node.getContent());
         String op = content.getString("operation"); // L'operazione da effettuare
         List<String> fields = new ArrayList<>();
         for (Object obj : content.getJSONArray("fields")) {
             fields.add(obj.toString());
         }
-        List<String> input_fields_values = new ArrayList<>();
-        String sub_op = ""; // Il nome della sub-operazione
         String regex_pattern = "";
         Pattern pattern = null;
-        String output = ""; // La stringa json che scriveremo come output
 
-        // Controllo che esista e non sia nullo il campo selezionato, nell'input
-        String error_field = "";
-        try {
-            for (String field : fields) {
-                error_field = field;
-                if (input_json.isNull(error_field)) {
-                    node.setOutput(nodeError(node, "Field: '" + error_field + "' is null or doesn't exist"));
-                    return false;
-                }
-                input_fields_values.add(input_json.getString(field));
+        jsonQuery(new JSONObject(node.getInput()).getJSONArray("data").get(0).toString(), fields.get(0));
+
+        // Catch errors for each field: type is not double, the field is not present in
+        // all documents
+        for (String field : fields) {
+            List<Double> l;
+            try {
+                l = JsonPath.read(data, "$.[*]." + field);
+            } catch (Exception e) {
+                node.setOutput(nodeError(node, "Field '" + field + "' is not a double"));
+                return false;
             }
-        } catch(JSONException je) {
-            node.setOutput(nodeError(node, "Field: '" + error_field + "' of specified type not found in input data"));
-            return false;
-        }
-
-        // Controllo stringa non vuota
-        for (String value : input_fields_values) {
-            if (value == null || value.isBlank() || value.isEmpty()) {
-                node.setOutput(nodeError(node, "Value of '"+fields.get(input_fields_values.indexOf(value))+"' is either blank, null or empty"));
+            if (l.size() == 0) {
+                node.setOutput(nodeError(node, "No document has the field: '" + field + "'"));
                 return false;
             }
         }
         
         // Vari controlli su regex, che sia presente nel json e che sia valido
+        String sub_op = ""; // Il nome della sub-operazione
         if (op.equals("regex")) {
             try {
                 sub_op = content.getString("sub-operation");
@@ -323,74 +364,126 @@ class GraphController {
                 return false;
             }
         }
-        
-        List<String> res = new ArrayList<String>(input_fields_values);
 
         switch (op) {
             case "upper":
-                res = res.stream().map(x -> StringsFns.getInstance().toUpper(x)).collect(Collectors.toList());
-                break;
-            case "lower":
-                res = res.stream().map(x -> StringsFns.getInstance().toLower(x)).collect(Collectors.toList());
-                break;
-            case "regex":
-                for (int i = 0; i < input_fields_values.size(); i++) {
-                    String input_value = input_fields_values.get(i);
-                    Matcher matcher = pattern.matcher(input_value);
-                    // boolean matchFound = matcher.find();
-                    List<Integer> starts = new ArrayList<>();
-                    List<Integer> ends = new ArrayList<>();
-                    while (matcher.find()) {
-                        starts.add(matcher.start());
-                        ends.add(matcher.end());
-
-                        // f(matcher.groupCount()); //0 //0
-                        // // Non fa fare il while
-                        // // f(matcher.results().count()); //1 //0
-                    }
-                    switch(sub_op) {
-                        case "delete":
-                            input_value = input_value.replaceAll(regex_pattern, "");
-                            break;
-                        case "keep":
-                            input_value = input_value.replaceAll("/^((?!"+regex_pattern+").)*$/", "");
-                            break;
-                        case "replace":
-                            String replace_string = "";
-                            try {
-                                replace_string = content.getString("replace");
-                            } catch(Exception e) {
-                                output = nodeError(node, "No 'replace' field in node content");
+                for (String field : fields) {
+                    for (int i = 0; i < doc_count; i++) {
+                        String path = "$.[" + i + "]." + field;
+                        String s = JsonPath.read(data, path).toString();
+                        if (s.charAt(0) == '[') { // if the result is an array
+                            net.minidev.json.JSONArray old_values = JsonPath.parse(data).read(path);
+                            JSONArray new_values = new JSONArray(old_values);
+                            for (int j = 0; j < new_values.length(); j++) {
+                                new_values.put(j, StringsFns.getInstance().toUpper(new_values.getString(j)));
+                            }
+                            if ((data = setSingleValues(path, new_values, data)).equals("")) {
+                                node.setOutput(nodeError(node, "Can't find asterisk in path"));
                                 return false;
                             }
-                            input_value = input_value.replaceAll(regex_pattern, replace_string);
-                            break;
-                        default: break;
+                        } else {
+                            data = JsonPath.parse(data).set(path, StringsFns.getInstance().toLower(s)).jsonString();
+                        }
                     }
-                    res.set(i, input_value);
                 }
-                // while (matcher.find()) {
-                //     // matcher.
-                //     String m = matcher.group();
-                //     System.out.println(m);
-                // }
-                // if(matchFound) {
-                //     System.out.println("Match found");
-                // } else {
-                //     System.out.println("Match not found");
-                // }
-                // System.out.println(matcher.group());
-                // System.out.println(matcher.toString());
+                // res = res.stream().map(x -> StringsFns.getInstance().toUpper(x)).collect(Collectors.toList());
+                break;
+            case "lower":
+                for (String field : fields) {
+                    for (int i = 0; i < doc_count; i++) {
+                        String path = "$.[" + i + "]."+field;
+                        String s = JsonPath.read(data, path).toString();
+                        if (s.charAt(0) == '[') { //if the result is an array
+                            net.minidev.json.JSONArray old_values = JsonPath.parse(data).read(path);
+                            JSONArray new_values = new JSONArray(old_values);
+                            for (int j = 0; j < new_values.length(); j++) {
+                                new_values.put(j, StringsFns.getInstance().toLower(new_values.getString(j)));
+                            }
+                            if ((data = setSingleValues(path, new_values, data)).equals("")) {
+                                node.setOutput(nodeError(node, "Can't find asterisk in path"));
+                                return false;
+                            }
+                        } else {
+                            data = JsonPath.parse(data).set(path, StringsFns.getInstance().toLower(s)).jsonString();
+                        }
+                    }
+                }
+                // res = res.stream().map(x -> StringsFns.getInstance().toLower(x)).collect(Collectors.toList());
+                break;
+            case "regex":
+                for (String field : fields) {
+                    for (int i = 0; i < doc_count; i++) {
+                        String path = "$.[" + i + "]." + field;
+                        String s = JsonPath.read(data, path).toString();
+                        if (s.charAt(0) == '[') { // if the result is an array
+                            net.minidev.json.JSONArray old_values = JsonPath.parse(data).read(path);
+                            JSONArray new_values = new JSONArray(old_values);
+                            for (int j = 0; j < new_values.length(); j++) {
+                                switch (sub_op) {
+                                    case "delete":
+                                        new_values.put(j, new_values.getString(j).replaceAll(regex_pattern, ""));
+                                        break;
+                                    case "keep":
+                                        new_values.put(j, new_values.getString(j).replaceAll("/^((?!" + regex_pattern + ").)*$/", ""));
+                                        break;
+                                    case "replace":
+                                        String replace_string = "";
+                                        try {
+                                            replace_string = content.getString("replace");
+                                        } catch (Exception e) {
+                                            node.setOutput(nodeError(node, "No 'replace' field in node content"));
+                                            return false;
+                                        }
+                                        new_values.put(j, new_values.getString(j).replaceAll(regex_pattern, replace_string));
+                                        break;
+                                    default:
+                                        break;
+                                }
+                            }
+                            if ((data = setSingleValues(path, new_values, data)).equals("")) {
+                                node.setOutput(nodeError(node, "Can't find asterisk in path"));
+                                return false;
+                            }
+                        } else {
+                            switch (sub_op) {
+                                case "delete":
+                                    s = s.replaceAll(regex_pattern, "");
+                                    break;
+                                case "keep":
+                                    s = s.replaceAll("/^((?!" + regex_pattern + ").)*$/", "");
+                                    break;
+                                case "replace":
+                                    String replace_string = "";
+                                    try {
+                                        replace_string = content.getString("replace");
+                                    } catch (Exception e) {
+                                        node.setOutput(nodeError(node, "No 'replace' field in node content"));
+                                        return false;
+                                    }
+                                    s = s.replaceAll(regex_pattern, replace_string);
+                                    break;
+                                default:
+                                    break;
+                            }
+                            data = JsonPath.parse(data).set(path, s).jsonString();
+                        }
+                    }
+                }            
+                        
+                        // Matcher matcher = pattern.matcher(value);
+                        // List<Integer> starts = new ArrayList<>();
+                        // List<Integer> ends = new ArrayList<>();
+                        // while (matcher.find()) {
+                        //     starts.add(matcher.start());
+                        //     ends.add(matcher.end());
+                        // }
                 break;
             default:
                 break;
         }
-            
-        for (int i = 0; i < res.size(); i++) {
-            input_json.put(fields.get(i), res.get(i));
-        }
-        output = input_json.toString();
-        node.setOutput(output);
+
+        JSONObject output_json = new JSONObject().put("data", new JSONArray(data));
+        node.setOutput(output_json.toString());
         return true;
     }
 
@@ -414,41 +507,35 @@ class GraphController {
             List<Double> l;
             try {
                 l = JsonPath.read(data, "$.[*]."+field);
-            } catch (Exception e) {
-                node.setOutput(nodeError(node, "Field '" + field + "' is not a double"));
+            } catch (InvalidPathException e) {
+                node.setOutput(nodeError(node,  "Invalid field path syntax: '"+field+"'"));
                 return false;
             }
-            if (l.size() != doc_count) {
-                node.setOutput(nodeError(node, "Not every document has the field: '"+field+"'"));
+            if (l.size() == 0) {
+                node.setOutput(nodeError(node, "No document has the field: '" + field + "'"));
                 return false;
             }
         }
 
-        // // Controllo che esista e non sia nullo il campo selezionato, nell'input
-        // String error_field = "";
-        // try {
-        //     for (String field : fields) {
-        //         error_field = field;
-        //         if (input_json.isNull(error_field)) {
-        //             node.setOutput(nodeError(node, "Field: '"+error_field+"' is null or doesn't exist"));
-        //             return false;
-        //         }
-        //         input_fields_values.add(input_json.getDouble(field));
-        //     }
-        // } catch (JSONException je) {
-        //     node.setOutput(nodeError(node, "Field: '"+error_field+"' of specified type not found in input data"));
-        //     return false;
-        // }
-
-        // List<Double> res = new ArrayList<Double>(input_fields_values);
-        
         switch(op) {
             case "integer":
                 for (String field : fields) {
                     for (int i = 0; i < doc_count; i++) {
-                        String doc_path = "$.[" + i + "].";
-                        Double value = JsonPath.read(data, doc_path+field);
-                        data = JsonPath.parse(data).set(doc_path+field, NumbersFns.getInstance().getInt(value)).jsonString();
+                        String path = "$.[" + i + "]." + field;
+                        String s = JsonPath.read(data, path).toString();
+                        if (s.charAt(0) == '[') { // if the result is an array
+                            net.minidev.json.JSONArray old_values = JsonPath.parse(data).read(path);
+                            JSONArray new_values = new JSONArray(old_values);
+                            for (int j = 0; j < new_values.length(); j++) {
+                                new_values.put(j, NumbersFns.getInstance().getInt(new_values.getDouble(j)));
+                            }
+                            if ((data = setSingleValues(path, new_values, data)).equals("")) {
+                                node.setOutput(nodeError(node, "Can't find asterisk in path"));
+                                return false;
+                            }
+                        } else {
+                            data = JsonPath.parse(data).set(path, NumbersFns.getInstance().getInt(Double.valueOf(s))).jsonString();
+                        }
                     }
                 }
                 // res = res.stream().map(x -> NumbersFns.getInstance().getInt(x)).collect(Collectors.toList());
@@ -461,9 +548,21 @@ class GraphController {
                 // }
                 for (String field : fields) {
                     for (int i = 0; i < doc_count; i++) {
-                        String doc_path = "$.[" + i + "].";
-                        Double value = JsonPath.read(data, doc_path + field);
-                        data = JsonPath.parse(data).set(doc_path + field, NumbersFns.getInstance().roundDecimals(value, digits)).jsonString();
+                        String path = "$.[" + i + "]." + field;
+                        String s = JsonPath.read(data, path).toString();
+                        if (s.charAt(0) == '[') { // if the result is an array
+                            net.minidev.json.JSONArray old_values = JsonPath.parse(data).read(path);
+                            JSONArray new_values = new JSONArray(old_values);
+                            for (int j = 0; j < new_values.length(); j++) {
+                                new_values.put(j, NumbersFns.getInstance().roundDecimals(new_values.getDouble(j), digits));
+                            }
+                            if ((data = setSingleValues(path, new_values, data)).equals("")) {
+                                node.setOutput(nodeError(node, "Can't find asterisk in path"));
+                                return false;
+                            }
+                        } else {
+                            data = JsonPath.parse(data).set(path, NumbersFns.getInstance().roundDecimals(Double.valueOf(s), digits)).jsonString();
+                        }
                     }
                 }
                 break;
@@ -473,9 +572,21 @@ class GraphController {
                 // }
                 for (String field : fields) {
                     for (int i = 0; i < doc_count; i++) {
-                        String doc_path = "$.[" + i + "].";
-                        Double value = JsonPath.read(data, doc_path + field);
-                        data = JsonPath.parse(data).set(doc_path + field, NumbersFns.getInstance().isNonNegative(value)).jsonString();
+                        String path = "$.[" + i + "]." + field;
+                        String s = JsonPath.read(data, path).toString();
+                        if (s.charAt(0) == '[') { // if the result is an array
+                            net.minidev.json.JSONArray old_values = JsonPath.parse(data).read(path);
+                            JSONArray new_values = new JSONArray(old_values);
+                            for (int j = 0; j < new_values.length(); j++) {
+                                new_values.put(j, NumbersFns.getInstance().isNonNegative(new_values.getDouble(j)));
+                            }
+                            if ((data = setSingleValues(path, new_values, data)).equals("")) {
+                                node.setOutput(nodeError(node, "Can't find asterisk in path"));
+                                return false;
+                            }
+                        } else {
+                            data = JsonPath.parse(data).set(path, NumbersFns.getInstance().isNonNegative(Double.valueOf(s))).jsonString();
+                        }
                     }
                 }
             default: break;
@@ -484,6 +595,146 @@ class GraphController {
         // for (int i = 0; i < res.size(); i++) {
         //     input_json.put(fields.get(i), res.get(i));
         // }
+        JSONObject output_json = new JSONObject().put("data", new JSONArray(data));
+        node.setOutput(output_json.toString());
+        return true;
+    }
+
+    /**
+     * @param node
+     * @return
+     */
+    public boolean numberAgg(Flownode node) {
+        String data = new JSONObject(node.getInput()).getJSONArray("data").toString();
+        Integer doc_count = new JSONArray(data).length();
+        JSONObject content = new JSONObject(node.getContent());
+        String op = content.getString("operation"); // L'operazione da effettuare
+        String new_field = content.getString("new_field"); // la nuova key da creare
+        // Boolean per_doc = content.getString("per_doc").equals("true")?true:false; // Process for every doc or globally
+        List<String> fields = new ArrayList<>();
+        for (Object obj : content.getJSONArray("fields")) {
+            fields.add(obj.toString());
+        }
+        
+        // Catch errors for each field: the field is not present in all documents
+        for (String field : fields) {
+            List<Double> l;
+            try {
+                l = JsonPath.read(data, "$.[*]."+field);
+            } catch (InvalidPathException e) {
+                node.setOutput(nodeError(node,  "Invalid field path syntax: '"+field+"'"));
+                return false;
+            }
+            if (l.size() == 0) {
+                node.setOutput(nodeError(node, "No document has the field: '" + field + "'"));
+                return false;
+            }
+        }
+
+        switch(op) {
+            case "max":
+                for (int i = 0; i < doc_count; i++) {
+                    List<Double> l = new ArrayList<Double>();
+                    for (String field : fields) {
+                        String path = "$.[" + i + "]." + field;
+                        String s = JsonPath.read(data, path).toString();
+                        if (s.charAt(0) == '[') { // if the result is an array
+                            net.minidev.json.JSONArray old_values = JsonPath.parse(data).read(path);
+                            JSONArray new_values = new JSONArray(old_values);
+                            for(int j = 0;j<new_values.length();j++) {
+                                l.add(new_values.getDouble(j));
+                            }
+                            Double new_value = NumbersFns.getInstance().max(l);
+                            data = JsonPath.parse(data).put("$.["+i+"]", new_field, new_value).jsonString();
+                        } else {
+                            data = JsonPath.parse(data).put("$.["+i+"]", new_field, Double.valueOf(s)).jsonString();
+                        }
+                    }
+                }
+                break;
+            case "min":
+                for (int i = 0; i < doc_count; i++) {
+                    List<Double> l = new ArrayList<Double>();
+                    for (String field : fields) {
+                        String path = "$.[" + i + "]." + field;
+                        String s = JsonPath.read(data, path).toString();
+                        if (s.charAt(0) == '[') { // if the result is an array
+                            net.minidev.json.JSONArray old_values = JsonPath.parse(data).read(path);
+                            JSONArray new_values = new JSONArray(old_values);
+                            for (int j = 0; j < new_values.length(); j++) {
+                                l.add(new_values.getDouble(j));
+                            }
+                            Double new_value = NumbersFns.getInstance().min(l);
+                            data = JsonPath.parse(data).put("$.[" + i + "]", new_field, new_value).jsonString();
+                        } else {
+                            data = JsonPath.parse(data).put("$.[" + i + "]", new_field, Double.valueOf(s)).jsonString();
+                        }
+                    }
+                }
+                break;
+            case "sum":
+                for (int i = 0; i < doc_count; i++) {
+                    List<Double> l = new ArrayList<Double>();
+                    for (String field : fields) {
+                        String path = "$.[" + i + "]." + field;
+                        String s = JsonPath.read(data, path).toString();
+                        if (s.charAt(0) == '[') { // if the result is an array
+                            net.minidev.json.JSONArray old_values = JsonPath.parse(data).read(path);
+                            JSONArray new_values = new JSONArray(old_values);
+                            for (int j = 0; j < new_values.length(); j++) {
+                                l.add(new_values.getDouble(j));
+                            }
+                            Double new_value = NumbersFns.getInstance().sum(l);
+                            data = JsonPath.parse(data).put("$.["+i+"]", new_field, new_value).jsonString();
+                        } else {    
+                            data = JsonPath.parse(data).put("$.["+i+"]", new_field, Double.valueOf(s)).jsonString();
+                        }    
+                    }
+                }
+                break;
+            case "avg":
+                for (int i = 0; i < doc_count; i++) {
+                    List<Double> l = new ArrayList<Double>();
+                    for (String field : fields) {
+                        String path = "$.[" + i + "]." + field;
+                        String s = JsonPath.read(data, path).toString();
+                        if (s.charAt(0) == '[') { // if the result is an array
+                            net.minidev.json.JSONArray old_values = JsonPath.parse(data).read(path);
+                            JSONArray new_values = new JSONArray(old_values);
+                            for (int j = 0; j < new_values.length(); j++) {
+                                l.add(new_values.getDouble(j));
+                            }
+                            Double new_value = NumbersFns.getInstance().avg(l);
+                            data = JsonPath.parse(data).put("$.[" + i + "]", new_field, new_value).jsonString();
+                        } else {
+                            data = JsonPath.parse(data).put("$.[" + i + "]", new_field, Double.valueOf(s)).jsonString();
+                        }
+                    }
+                }
+                break;
+            case "count":
+                for (int i = 0; i < doc_count; i++) {
+                    List<Double> l = new ArrayList<Double>();
+                    for (String field : fields) {
+                        String path = "$.[" + i + "]." + field;
+                        String s = JsonPath.read(data, path).toString();
+                        if (s.charAt(0) == '[') { // if the result is an array
+                            net.minidev.json.JSONArray old_values = JsonPath.parse(data).read(path);
+                            JSONArray new_values = new JSONArray(old_values);
+                            for (int j = 0; j < new_values.length(); j++) {
+                                l.add(new_values.getDouble(j));
+                            }
+                            Integer new_value = NumbersFns.getInstance().count(l);
+                            data = JsonPath.parse(data).put("$.[" + i + "]", new_field, new_value).jsonString();
+                        } else {
+                            data = JsonPath.parse(data).put("$.[" + i + "]", new_field, Double.valueOf(s)).jsonString();
+                        }
+                    }
+                }
+                break;
+            default: break;
+        }
+
         JSONObject output_json = new JSONObject().put("data", new JSONArray(data));
         node.setOutput(output_json.toString());
         return true;
@@ -499,51 +750,45 @@ class GraphController {
             fields.add(obj.toString());
         }
 
-        // Catch errors: every document must have the field
+        // Catch errors: at least one document must have the field
         for (String field : fields) {
-            List<Object> l = JsonPath.read(data, "$.[*]." + field);
-            if (l.size() != doc_count) {
-                node.setOutput(nodeError(node, "Not every document has the field: '" + field + "'"));
+            try {
+                List<Object> l = JsonPath.read(data, "$.[*]." + field);
+                if (l.size() == 0) {
+                    node.setOutput(nodeError(node, "No document has the field: '" + field + "'"));
+                    return false;
+                }
+            } catch(InvalidPathException e) {
+                node.setOutput(nodeError(node, "Invalid field path syntax: '"+field+"'"));
                 return false;
             }
         }
         
         switch (op) {
             case "select":
-
-                // var newObject = JSON.stringify({
-                //     $..['id', 'name', 'username', 'email']
-                //     $.identies[*].['extern_uid']
-                // });
-
-                for (String field : fields) {
-                    for (int i = 0; i < doc_count; i++) {
-                        String doc_path = "$.[" + i + "].";
-                        // CERCA SU INTERNET COME FILTRARE CAMPI DI UN JSON
-                        // data = JsonPath.parse(data)..jsonString();
+                String out_arr = "[]";
+                JSONArray out_arr_json = new JSONArray(out_arr);
+                for (int i = 0; i < doc_count; i++) {
+                    JSONObject js_obj = new JSONObject();
+                    for (String field : fields) {
+                        String path = "$.["+i+"]."+field;
+                        String[] x = field.split("[.]");
+                        String key = x[x.length-1];
+                        if (key.charAt(0) == '[') key = x[x.length-2]; //if is an array
+                        js_obj.put(key, (Object)JsonPath.parse(data).read(path));
+                        out_arr_json.put(i, js_obj);
                     }
                 }
-                return false;
-                
-                // for (int i = 0; i < output_json.length(); i++) {
-                //     for (Iterator<String> iterator = output_json.getJSONObject(i).keys(); iterator.hasNext(); ) {
-                //         String value = iterator.next();
-                //         if (!content_fields_list.contains(value)) {
-                //             iterator.remove();
-                //         }
-                //     }
-                // }
-                // break;
-            // case "deselect":
-            //     for (int i = 0; i < output_json.length(); i++) {
-            //         for (Iterator<String> iterator = output_json.getJSONObject(i).keys(); iterator.hasNext();) {
-            //             String value = iterator.next();
-            //             if (content_fields_list.contains(value)) {
-            //                 iterator.remove();
-            //             }
-            //         }
-            //     }
-            //     break;
+                data = out_arr_json.toString(); 
+                break;
+            case "deselect":
+                for (int i = 0; i < doc_count; i++) {
+                    for (String field : fields) {
+                        String path = "$.[" + i + "]." + field;
+                        data = JsonPath.parse(data).delete(path).jsonString();
+                    }
+                }
+                break;
             default:
                 break;
         }
@@ -588,7 +833,32 @@ class GraphController {
     }
 
     public boolean mongoWrite(Flownode node) {
-        return false;
+        JSONArray data = new JSONObject(node.getInput()).getJSONArray("data");
+        final JSONObject content_json = new JSONObject(node.getContent());
+        final String database = content_json.getString("db");
+        final String collection = content_json.getString("collection");
+
+        MongoClient client = MongoClients.create("mongodb://localhost:8089");
+        MongoDatabase db = client.getDatabase(database);
+        // // Catching empty database (has no collections)
+        // if (db.listCollectionNames().into(new ArrayList<>()).size() == 0) {
+        //     node.setOutput(nodeError(node, "No collections in database: '" + database + "'"));
+        //     return false;
+        // }
+        MongoCollection col = db.getCollection(collection);
+        // // Catching empty collection (has no documents)
+        // if (col.countDocuments() == 0) {
+        //     node.setOutput(nodeError(node, "No documents in collection: '" + collection + "'"));
+        //     return false;
+        // }
+        
+        List<Document> docs = new ArrayList<>();
+        for (int i = 0; i < data.length(); i++) {
+            Document d = new Document(data.getJSONObject(i).toMap());
+            docs.add(d);
+        }
+        col.insertMany(docs);
+        return true;
     }
     
     /**
@@ -612,4 +882,59 @@ class GraphController {
         node.setOutput(res);
         return true;
     }
+
+    public boolean prometheus(Flownode node) {
+        String data = new JSONObject(node.getInput()).getJSONArray("data").toString();
+        Integer doc_count = new JSONArray(data).length();
+        final JSONObject content_json = new JSONObject(node.getContent());
+        // final String field = content_json.getString("field");
+        final String metric_type = content_json.getString("metric_type");
+        // JSONObject output_json = new JSONObject(); // Il json che scriveremo come output
+        List<String> fields = new ArrayList<>();
+        for (Object obj : content_json.getJSONArray("fields")) {
+            fields.add(obj.toString());
+        }
+
+        // Catch errors: at least one document must have the field
+        for (String field : fields) {
+            try {
+                List<Object> l = JsonPath.read(data, "$.[*]." + field);
+                if (l.size() == 0) {
+                    node.setOutput(nodeError(node, "No document has the field: '" + field + "'"));
+                    return false;
+                }
+            } catch (InvalidPathException e) {
+                node.setOutput(nodeError(node, "Invalid field path syntax: '" + field + "'"));
+                return false;
+            }
+        }
+
+        switch (metric_type) {
+            case "counter":
+                for (int i = 0; i < doc_count; i++) {
+                    for (String field : fields) {
+                        String path = "$.[" + i + "]." + field;
+                        String[] x = field.split("[.]");
+                        String key = x[x.length - 1];
+                        if (key.charAt(0) == '[') {
+                            key = x[x.length - 2]; // if is an array
+                        }
+                        Prom p = new Prom(field, i);
+                    }
+                }
+                break;
+            case "gauge":
+                break;
+            case "histogram":
+                break;
+            case "summary":
+                break;
+            default: break;
+        }
+
+        // node.setOutput(output_json.toString());
+        System.out.println("okkkkkkkkk1");
+        return true;
+    }
 }
+ 

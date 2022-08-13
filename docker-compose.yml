@@ -43,5 +43,12 @@ services:
 #        depends_on:
 #            - graphmanager
 
+    prom:
+        image: prom/prometheus
+        ports:
+            - 8092:9090
+        volumes:
+            - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+
 networks:
     graph_net:
