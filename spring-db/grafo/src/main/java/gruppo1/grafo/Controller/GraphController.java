@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 import gruppo1.grafo.Model.*;
 import gruppo1.grafo.Repository.*;
 
-@CrossOrigin(origins = "http://localhost:4200")
+@CrossOrigin(origins = "*") // cambia da localhost:4200 a *, per poter funzionare nel network docker
 @RestController
 @RequestMapping("/api") //tutte le url iniziano con /api/...
 public class GraphController {
@@ -34,8 +34,9 @@ public class GraphController {
         try {
             List<Graph> graphs = new ArrayList<Graph>();
 
-            if (name == null)
+            if (name == null) {
                 graphRepository.findAll().forEach(graphs::add);
+            }
             else
                 graphRepository.findByNameContaining(name).forEach(graphs::add);
 

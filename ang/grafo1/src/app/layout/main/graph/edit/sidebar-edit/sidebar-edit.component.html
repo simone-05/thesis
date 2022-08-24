@@ -42,7 +42,7 @@
           </div>
 
           <button class="mt-2 w-50 btn btn-primary"
-            [disabled]="!editGraphForm.controls['graph_name'].valid"
+            [disabled]="!editGraphForm.controls['graph_name'].valid || graphSearching || graphNameAlready"
             type="button" (click)="editGraph()">Save</button>
         </form>
       </div>

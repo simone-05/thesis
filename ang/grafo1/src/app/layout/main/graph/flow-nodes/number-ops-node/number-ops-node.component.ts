@@ -43,6 +43,7 @@ export class NumberOpsNodeComponent extends FlowNodesComponent implements OnDest
     super.selectedNodeInputChange(node);
     const content = JSON.parse(node.content);
     this.getControl("node_operation").setValue(content["operation"]);
+    this.changedOp(this.getControl("node_operation").value);
     // this.getControl("node_sub_operation").setValue(content["sub-operation"]);
     // this.getControl("node_fields").setValue(content["fields"]);
     this.flowNodeForm.controls["node_fields"] = this.fb.array([], Validators.required);

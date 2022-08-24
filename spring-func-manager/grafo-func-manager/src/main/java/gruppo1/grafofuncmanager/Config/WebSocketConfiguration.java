@@ -13,7 +13,7 @@ public class WebSocketConfiguration implements WebSocketMessageBrokerConfigurer{
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         // Per usare ws://localhost:8080/stomp-endpoint :
-        registry.addEndpoint("/stomp-endpoint").setAllowedOrigins("http://localhost:4200");
+        registry.addEndpoint("/stomp-endpoint").setAllowedOrigins("*"); //cambia da localhost:4200 a * per poter funzionare nel network docker
         
         // Per usare http://localhost:8080/stomp-endpoint :
         // registry.addEndpoint("/stomp-endpoint").setAllowedOrigins("http://localhost:4200").withSockJS();

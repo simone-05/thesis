@@ -23,6 +23,7 @@ export class EditComponent implements OnInit, OnDestroy {
 
     this.graph_id = this.activatedRoute.snapshot.params['graph_id'];
     this.graphEditingService.loadGraph(this.graph_id);
+    this.fm.clear_metrics().subscribe();
 
     // Quando ha finito di caricare il grafo
     this.graph_subscription = this.graphEditingService.graph$.subscribe(element => {

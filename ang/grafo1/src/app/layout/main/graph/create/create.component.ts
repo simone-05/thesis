@@ -48,13 +48,13 @@ export class CreateComponent {
   checkGraphName() {
     this.graphSearching = true;
     let new_name = this.editGraphForm.controls["graph_name"].value;
-    let old_name = this.graphEditingService.graph.name;
-    if (new_name != old_name && new_name != "") {
+    // let old_name = this.graphEditingService.graph.name;
+    if (new_name != "") {
       this.sp.checkGraphExists(new_name).subscribe((found) => {
         this.graphNameAlready = found;
         this.graphSearching = false;
       });
-    };
+    }
   }
 
   tryCreate() {

@@ -12,7 +12,7 @@ import { NodeBasicsComponent } from '../../node-basics/node-basics.component';
   templateUrl: './sidebar-edit.component.html',
   styleUrls: ['./sidebar-edit.component.scss'],
 })
-export class SidebarEditComponent implements OnInit, OnChanges, OnDestroy {
+export class SidebarEditComponent implements OnChanges, OnDestroy {
   view: string;
 
   editGraphForm: FormGroup;
@@ -106,8 +106,6 @@ export class SidebarEditComponent implements OnInit, OnChanges, OnDestroy {
     });
   }
 
-  ngOnInit(): void { }
-
   ngOnChanges(changes: SimpleChanges): void {
     if (this.forcedChange == 1) {
       this.selectedNodeInputChange(this.selectedNode);
@@ -197,7 +195,7 @@ export class SidebarEditComponent implements OnInit, OnChanges, OnDestroy {
       this.sp.checkGraphExists(new_name).subscribe((found) => {
         this.graphNameAlready = found;
         this.graphSearching = false;
-      })
+      });
     }
   }
 

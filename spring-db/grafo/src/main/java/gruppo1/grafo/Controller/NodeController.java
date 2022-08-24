@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 import gruppo1.grafo.Model.*;
 import gruppo1.grafo.Repository.*;
 
-@CrossOrigin(origins = "http://localhost:4200")
+@CrossOrigin(origins = "*")
 @RestController
 @RequestMapping("/api") // tutte le url iniziano con /api/...
 public class NodeController {

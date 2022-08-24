@@ -1,5 +1,7 @@
 package gruppo1.grafofuncmanager.Controller;
 
+import java.io.IOException;
+import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -20,8 +22,11 @@ import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.mongodb.client.MongoClient;
@@ -44,8 +49,13 @@ import gruppo1.grafofuncmanager.Functions.StringsFns;
 import gruppo1.grafofuncmanager.Model.Edge;
 import gruppo1.grafofuncmanager.Model.Flownode;
 import gruppo1.grafofuncmanager.Model.Graph;
-import gruppo1.grafofuncmanager.Prom;
+import io.prometheus.client.CollectorRegistry;
 import io.prometheus.client.Counter;
+import io.prometheus.client.Gauge;
+import io.prometheus.client.Histogram;
+import io.prometheus.client.Summary;
+import io.prometheus.client.Collector.MetricFamilySamples;
+import io.prometheus.client.exporter.common.TextFormat;
 
 import org.bson.Document;
 import org.json.JSONArray;
@@ -54,17 +64,83 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 
-@CrossOrigin("http://localhost:4200")
+@CrossOrigin(origins = "*") // cambia da localhost:4200 a *, per poter funzionare nel network docker
 @RestController
 // @RequestMapping("/api")
 class GraphController {
     Graph graph;
 
+    CollectorRegistry metrics_registry_test = new CollectorRegistry();
+    List<Counter> c_list = new ArrayList<>();
+
+    @RequestMapping(value="/prom")
+    public void prom_metrics(Writer responseWriter) throws IOException {
+        // TextFormat.write004(responseWriter, CollectorRegistry.defaultRegistry.metricFamilySamples()); //Per usare il registro di default delle metriche, quello cui registro una metrica con .build(). ... .register();
+        TextFormat.write004(responseWriter, metrics_registry.metricFamilySamples());
+        responseWriter.close();
+    }
+
+    @RequestMapping(value="/prom2")
+    public void prom2_metrics(Writer responseWriter) throws IOException {
+        TextFormat.write004(responseWriter, metrics_registry_test.metricFamilySamples());
+        responseWriter.close();
+    }
+
+    @RequestMapping(value="/prom_clear")
+    public void prom_metrics_clear() {
+        metrics_registry_test.clear();
+        c_list.clear();
+    }
+
+    @RequestMapping(value="/prom_add_counter/{name}")
+    public String prom_add_counter(@PathVariable(value="name") String name) {
+        try {
+            Counter counter = Counter.build().name(name).help(name+" help").register(metrics_registry_test);
+            c_list.add(counter);
+            return "Added "+name;
+        } catch(Exception e) {
+            return "Can't add "+name;
+        }
+    }
+
+    @RequestMapping(value="/prom_inc_counter/{name}")
+    public String prom_inc_counter(@PathVariable(value="name") String name) {
+        for (Counter counter : c_list) {
+                if (counter.describe().get(0).name.equals(name)) {
+                    counter.inc(1);
+                    return counter.describe().toString();
+                }
+        }
+        return "Failed";
+    }
+
+    @RequestMapping(value="/prom_delete_metric/{name}")
+    public String prom_delete_metric(@PathVariable(value="name") String name) {
+        for (Counter counter : c_list) {
+                if (counter.describe().get(0).name.equals(name)) {
+                    c_list.remove(counter);
+                    return "Deleted";
+                }
+        }
+        return "Failed";
+    }
+
+    /**
+     * To clear all metrics to send to prometheus, to create new ones according to the new graph
+     */
+    @GetMapping(value="/metrics_clear")
+    public void clear_metrics() {
+        metrics_registry.clear();
+        counters_list.clear();
+        gauges_list.clear();
+        histograms_list.clear();
+        summaries_list.clear();
+    }
+    
     @PostMapping(value="/graph/update")
     public ResponseEntity<Graph> updateGraph(@RequestBody Graph graph) {
         try {
             this.graph = new Graph(graph.getName(), graph.getNodes(), graph.getEdges());
-            
             return new ResponseEntity<>(graph, HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
@@ -275,17 +351,11 @@ class GraphController {
      */
     private List<String> jsonQuery(String data, String query) {
         List<String> res = new ArrayList<>();
-        Integer paths_count = 0;
 
         if (JsonPath.read(data, query).toString().charAt(0) != '[') {
             // Un solo campo
             res.add(query);
         } else {
-            // Sono più campi
-            net.minidev.json.JSONArray json_values = JsonPath.read(data, query);
-            paths_count = json_values.size(); //per controllare se il numero coincide dopo
-            Object[] values = json_values.toArray(); //per controllare se i valori sono giusti
-
             List<String> path_list = new ArrayList<String>();
             String[] s = query.split("[.]");
             for (int i = 0; i < s.length; i++) {
@@ -324,7 +394,6 @@ class GraphController {
             fields.add(obj.toString());
         }
         String regex_pattern = "";
-        Pattern pattern = null;
 
         jsonQuery(new JSONObject(node.getInput()).getJSONArray("data").get(0).toString(), fields.get(0));
 
@@ -355,7 +424,7 @@ class GraphController {
             }
             try {
                 regex_pattern = content.getString("regex");
-                pattern = Pattern.compile(regex_pattern);
+                Pattern pattern = Pattern.compile(regex_pattern);
             } catch(JSONException e) {
                 node.setOutput(nodeError(node, "No input regex pattern"));
                 return false;
@@ -601,6 +670,7 @@ class GraphController {
     }
 
     /**
+     * Aggregation of numbers, function node
      * @param node
      * @return
      */
@@ -635,6 +705,7 @@ class GraphController {
             case "max":
                 for (int i = 0; i < doc_count; i++) {
                     List<Double> l = new ArrayList<Double>();
+                    Double max = .0;
                     for (String field : fields) {
                         String path = "$.[" + i + "]." + field;
                         String s = JsonPath.read(data, path).toString();
@@ -644,17 +715,21 @@ class GraphController {
                             for(int j = 0;j<new_values.length();j++) {
                                 l.add(new_values.getDouble(j));
                             }
-                            Double new_value = NumbersFns.getInstance().max(l);
-                            data = JsonPath.parse(data).put("$.["+i+"]", new_field, new_value).jsonString();
+                            // Double new_value = NumbersFns.getInstance().max(l);
+                            // data = JsonPath.parse(data).put("$.["+i+"]", new_field, new_value).jsonString();
                         } else {
-                            data = JsonPath.parse(data).put("$.["+i+"]", new_field, Double.valueOf(s)).jsonString();
+                            // data = JsonPath.parse(data).put("$.["+i+"]", new_field, Double.valueOf(s)).jsonString();
+                            l.add(Double.valueOf(s));
                         }
+                        max = NumbersFns.getInstance().max(l);
+                        data = JsonPath.parse(data).put("$.["+i+"]", new_field, max).jsonString();
                     }
                 }
                 break;
             case "min":
                 for (int i = 0; i < doc_count; i++) {
                     List<Double> l = new ArrayList<Double>();
+                    Double min = .0;
                     for (String field : fields) {
                         String path = "$.[" + i + "]." + field;
                         String s = JsonPath.read(data, path).toString();
@@ -664,17 +739,21 @@ class GraphController {
                             for (int j = 0; j < new_values.length(); j++) {
                                 l.add(new_values.getDouble(j));
                             }
-                            Double new_value = NumbersFns.getInstance().min(l);
-                            data = JsonPath.parse(data).put("$.[" + i + "]", new_field, new_value).jsonString();
+                            // Double new_value = NumbersFns.getInstance().min(l);
+                            // data = JsonPath.parse(data).put("$.[" + i + "]", new_field, new_value).jsonString();
                         } else {
-                            data = JsonPath.parse(data).put("$.[" + i + "]", new_field, Double.valueOf(s)).jsonString();
+                            // data = JsonPath.parse(data).put("$.[" + i + "]", new_field, Double.valueOf(s)).jsonString();
+                            l.add(Double.valueOf(s));
                         }
+                        min = NumbersFns.getInstance().min(l);
+                        data = JsonPath.parse(data).put("$.[" + i + "]", new_field, min).jsonString();
                     }
                 }
                 break;
             case "sum":
                 for (int i = 0; i < doc_count; i++) {
                     List<Double> l = new ArrayList<Double>();
+                    Double res = .0;
                     for (String field : fields) {
                         String path = "$.[" + i + "]." + field;
                         String s = JsonPath.read(data, path).toString();
@@ -684,17 +763,20 @@ class GraphController {
                             for (int j = 0; j < new_values.length(); j++) {
                                 l.add(new_values.getDouble(j));
                             }
-                            Double new_value = NumbersFns.getInstance().sum(l);
-                            data = JsonPath.parse(data).put("$.["+i+"]", new_field, new_value).jsonString();
+                            res += NumbersFns.getInstance().sum(l);
+                            // data = JsonPath.parse(data).put("$.["+i+"]", new_field, new_value).jsonString();
                         } else {    
-                            data = JsonPath.parse(data).put("$.["+i+"]", new_field, Double.valueOf(s)).jsonString();
+                            // data = JsonPath.parse(data).put("$.["+i+"]", new_field, Double.valueOf(s)).jsonString();
+                            res += Double.valueOf(s);
                         }    
+                        data = JsonPath.parse(data).put("$.["+i+"]", new_field, res).jsonString();
                     }
                 }
                 break;
             case "avg":
                 for (int i = 0; i < doc_count; i++) {
                     List<Double> l = new ArrayList<Double>();
+                    Double res = .0;
                     for (String field : fields) {
                         String path = "$.[" + i + "]." + field;
                         String s = JsonPath.read(data, path).toString();
@@ -704,17 +786,21 @@ class GraphController {
                             for (int j = 0; j < new_values.length(); j++) {
                                 l.add(new_values.getDouble(j));
                             }
-                            Double new_value = NumbersFns.getInstance().avg(l);
-                            data = JsonPath.parse(data).put("$.[" + i + "]", new_field, new_value).jsonString();
+                            // Double new_value = NumbersFns.getInstance().avg(l);
+                            // data = JsonPath.parse(data).put("$.[" + i + "]", new_field, new_value).jsonString();
                         } else {
-                            data = JsonPath.parse(data).put("$.[" + i + "]", new_field, Double.valueOf(s)).jsonString();
+                            // data = JsonPath.parse(data).put("$.[" + i + "]", new_field, Double.valueOf(s)).jsonString();
+                            l.add(Double.valueOf(s));
                         }
+                        res = NumbersFns.getInstance().avg(l);
+                        data = JsonPath.parse(data).put("$.[" + i + "]", new_field, res).jsonString();
                     }
                 }
                 break;
             case "count":
                 for (int i = 0; i < doc_count; i++) {
                     List<Double> l = new ArrayList<Double>();
+                    Integer res = 0;
                     for (String field : fields) {
                         String path = "$.[" + i + "]." + field;
                         String s = JsonPath.read(data, path).toString();
@@ -724,11 +810,14 @@ class GraphController {
                             for (int j = 0; j < new_values.length(); j++) {
                                 l.add(new_values.getDouble(j));
                             }
-                            Integer new_value = NumbersFns.getInstance().count(l);
-                            data = JsonPath.parse(data).put("$.[" + i + "]", new_field, new_value).jsonString();
+                            // Integer new_value = NumbersFns.getInstance().count(l);
+                            // data = JsonPath.parse(data).put("$.[" + i + "]", new_field, new_value).jsonString();
                         } else {
-                            data = JsonPath.parse(data).put("$.[" + i + "]", new_field, Double.valueOf(s)).jsonString();
+                            // data = JsonPath.parse(data).put("$.[" + i + "]", new_field, Double.valueOf(s)).jsonString();
+                            l.add(Double.valueOf(s));
                         }
+                        res = NumbersFns.getInstance().count(l);
+                        data = JsonPath.parse(data).put("$.[" + i + "]", new_field, res).jsonString();
                     }
                 }
                 break;
@@ -805,7 +894,7 @@ class GraphController {
         JSONObject output_json = new JSONObject(); // Il json che scriveremo come output
         
         // MongoClient client = MongoClients.create("mongodb://simone:simone@localhost:8090/test");
-        MongoClient client = MongoClients.create("mongodb://localhost:8089");
+        MongoClient client = MongoClients.create("mongodb://mongo:27017"); // cambia da localhost:8090 a mongo:27017 per poter funzionare nel docker network
         MongoDatabase db = client.getDatabase(database);
         // Catching empty database (has no collections)
         if (db.listCollectionNames().into(new ArrayList<>()).size() == 0) {
@@ -838,7 +927,7 @@ class GraphController {
         final String database = content_json.getString("db");
         final String collection = content_json.getString("collection");
 
-        MongoClient client = MongoClients.create("mongodb://localhost:8089");
+        MongoClient client = MongoClients.create("mongodb://mongo:27017"); //cambia da localhost:8089 a mongo:27017 per poter funzionare nel network docker
         MongoDatabase db = client.getDatabase(database);
         // // Catching empty database (has no collections)
         // if (db.listCollectionNames().into(new ArrayList<>()).size() == 0) {
@@ -883,13 +972,20 @@ class GraphController {
         return true;
     }
 
+    CollectorRegistry metrics_registry = new CollectorRegistry();
+    List<Counter> counters_list = new ArrayList<>();
+    List<Gauge> gauges_list = new ArrayList<>();
+    List<Histogram> histograms_list = new ArrayList<>();
+    List<Summary> summaries_list = new ArrayList<>();
+
     public boolean prometheus(Flownode node) {
         String data = new JSONObject(node.getInput()).getJSONArray("data").toString();
         Integer doc_count = new JSONArray(data).length();
         final JSONObject content_json = new JSONObject(node.getContent());
         // final String field = content_json.getString("field");
         final String metric_type = content_json.getString("metric_type");
-        // JSONObject output_json = new JSONObject(); // Il json che scriveremo come output
+        // final String[] histo_string_buckets = content_json.getString("histogram_buckets").split(",");
+        // List<Double> histo_buckets = new ArrayList<Double>();
         List<String> fields = new ArrayList<>();
         for (Object obj : content_json.getJSONArray("fields")) {
             fields.add(obj.toString());
@@ -903,37 +999,197 @@ class GraphController {
                     node.setOutput(nodeError(node, "No document has the field: '" + field + "'"));
                     return false;
                 }
+                if (!field.matches("[a-zA-Z_:][a-zA-Z0-9_:]*")) {
+                    node.setOutput(nodeError(node, "Metric name can't include '"+field+"' due to unsupported characters"));
+                    return false;
+                }
             } catch (InvalidPathException e) {
                 node.setOutput(nodeError(node, "Invalid field path syntax: '" + field + "'"));
                 return false;
             }
         }
 
+        // for (int i=0;i<histo_string_buckets.length;i++) {
+        //     try {
+        //         histo_buckets.add(Double.parseDouble(histo_string_buckets[i]));
+        //     } catch(Exception e) {
+        //         node.setOutput(nodeError(node, "Can't convert bucket "+histo_string_buckets[i]+" to Double"));
+        //         return false;
+        //     }
+        // }
+
         switch (metric_type) {
             case "counter":
                 for (int i = 0; i < doc_count; i++) {
                     for (String field : fields) {
                         String path = "$.[" + i + "]." + field;
-                        String[] x = field.split("[.]");
-                        String key = x[x.length - 1];
-                        if (key.charAt(0) == '[') {
-                            key = x[x.length - 2]; // if is an array
+                        field = field.replaceAll("[.]", "_");
+                        // String[] x = field.split("[.]");
+                        // String key = x[x.length - 1];
+                        // if (key.charAt(0) == '[') {
+                        //     key = x[x.length - 2]; // if is an array
+                        // }
+                        String metric_name = "doc_" + i + "_" + field+"_counter";
+                        Boolean found = false;
+                        for (Counter c : counters_list) {
+                            if (c.describe().get(0).name.equals(metric_name)) {
+                                c.inc();
+                                found = true;
+                            }
                         }
-                        Prom p = new Prom(field, i);
+                        if (!found) {
+                            try {
+                                Counter counter = Counter.build().name(metric_name).help("Document number " + i + ", path: " + path).register(metrics_registry);
+                                counter.inc();
+                                counters_list.add(counter);
+                                // .labelNames("nome_label1", "nome_label2")
+                            } catch(IllegalArgumentException e) {
+                                node.setOutput(nodeError(node, "Counter creation error for: "+path+" Maybe it already exists a metric with same name"));
+                                return false;
+                            }
+                        }
                     }
                 }
                 break;
             case "gauge":
+                for (int i = 0; i < doc_count; i++) {
+                    for (String field : fields) {
+                        String path = "$.[" + i + "]." + field;
+                        field = field.replaceAll("[.]", "_");
+                        String metric_name = "doc_" + i + "_" + field+"_gauge";
+                        Boolean found = false;
+                        double value;
+                        if (JsonPath.read(data, path) instanceof Integer) {
+                            int x = JsonPath.read(data, path);
+                            value = (double) x;
+                        } else {
+                            value = JsonPath.read(data, path);
+                        }
+                        for (Gauge g: gauges_list) {
+                            if (g.describe().get(0).name.equals(metric_name)) {
+                                g.set(value);
+                                found = true;
+                            }
+                        }
+                        if (!found) {
+                            // try {
+                                Gauge gauge = Gauge.build().name(metric_name).help("Document number " + i + ", path: " + path+ ", GAUGE").register(metrics_registry);
+                                gauge.set(value);
+                                gauges_list.add(gauge);
+                                // .labelNames("nome_label1", "nome_label2")
+                            // } catch (IllegalArgumentException e) {
+                            //     node.setOutput(nodeError(node, "Gauge creation error for: " + path + " Maybe it already exists a metric with same name"));
+                            //     return false;
+                            // } catch (ClassCastException e) {
+                            //     node.setOutput(nodeError(node, "Gauge creation error for: "+path+" Maybe the value is not a Double"));
+                            //     return false;
+                            // }
+                        }
+                    }
+                }
                 break;
             case "histogram":
+                final Double bucket_start = content_json.getDouble("histo_start");
+                final Double bucket_width = content_json.getDouble("histo_width");
+                final Integer bucket_count = content_json.getInt("histo_count");
+                for (int i = 0; i < doc_count; i++) {
+                    for (String field : fields) {
+                        String path = "$.[" + i + "]." + field;
+                        field = field.replaceAll("[.]", "_");
+                        String metric_name = "doc_" + i + "_" + field + "_histogram";
+                        Boolean found = false;
+                        double value;
+                        if (JsonPath.read(data, path) instanceof Integer) {
+                            int x = JsonPath.read(data, path);
+                            value = (double) x;
+                        } else {
+                            value = JsonPath.read(data, path);
+                        }
+                        for (Histogram h : histograms_list) {
+                            if (h.describe().get(0).name.equals(metric_name)) {
+                                h.observe(value);
+                                found = true;
+                            }
+                        }
+                        if (!found) {
+                            try {
+                                Histogram histogram = Histogram.build().name(metric_name)
+                                        .help("Document number " + i + ", path: " + path + ", HISTOGRAM").linearBuckets(bucket_start, bucket_width, bucket_count)
+                                        .register(metrics_registry);
+                                histogram.observe(value);
+                                // Histogram.Timer requestTimer = histogram.startTimer();
+                                // requestTimer.observeDuration();
+                                histograms_list.add(histogram);
+                                // .labelNames("nome_label1", "nome_label2")
+                            } catch (IllegalArgumentException e) {
+                                node.setOutput(nodeError(node, "Histogram creation error for: " + path
+                                        + " Maybe it already exists a metric with same name"));
+                                return false;
+                            } catch (ClassCastException e) {
+                                node.setOutput(nodeError(node,
+                                        "Histogram creation error for: " + path + " Maybe the value is not a Double"));
+                                return false;
+                            }
+                        }
+                    }
+                }
                 break;
             case "summary":
+                for (int i = 0; i < doc_count; i++) {
+                    for (String field : fields) {
+                        String path = "$.[" + i + "]." + field;
+                        field = field.replaceAll("[.]", "_");
+                        String metric_name = "doc_" + i + "_" + field + "_summary";
+                        Boolean found = false;
+                        double value;
+                        if (JsonPath.read(data, path) instanceof Integer) {
+                            int x = JsonPath.read(data, path);
+                            value = (double) x;
+                        } else {
+                            value = JsonPath.read(data, path);
+                        }
+                        for (Summary s : summaries_list) {
+                            if (s.describe().get(0).name.equals(metric_name)) {
+                                s.observe(value);
+                                found = true;
+                            }
+                        }
+                        if (!found) {
+                            try {
+                                Summary summary = Summary.build().name(metric_name)
+                                        .help("Document number " + i + ", path: " + path + ", SUMMARY")
+                                        .quantile(0, 0)
+                                        .quantile(.10, .001)
+                                        .quantile(.20, .001)
+                                        .quantile(.30, .001)
+                                        .quantile(.40, .001)
+                                        .quantile(.50, .001)
+                                        .quantile(.60, .001)
+                                        .quantile(.70, .001)
+                                        .quantile(.80, .001)
+                                        .quantile(.90, .001)
+                                        .quantile(1, 0)
+                                        .register(metrics_registry);
+                                summary.observe(value);
+                                summaries_list.add(summary);
+                                // .labelNames("nome_label1", "nome_label2")
+                            } catch (IllegalArgumentException e) {
+                                node.setOutput(nodeError(node, "Summary creation error for: " + path
+                                        + " Maybe it already exists a metric with same name"));
+                                return false;
+                            } catch (ClassCastException e) {
+                                node.setOutput(nodeError(node,
+                                        "Summary creation error for: " + path + " Maybe the value is not a Double"));
+                                return false;
+                            }
+                        }
+                    }
+                }                
                 break;
             default: break;
         }
 
         // node.setOutput(output_json.toString());
-        System.out.println("okkkkkkkkk1");
         return true;
     }
 }

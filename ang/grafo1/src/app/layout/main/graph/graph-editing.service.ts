@@ -4,6 +4,7 @@ import { ClusterNode, NgxGraphModule } from '@swimlane/ngx-graph';
 import { DatePipe } from '@angular/common';
 import { FlowNode } from 'src/app/shared/flow_nodes-interface';
 import { SpringDbService } from 'src/app/shared/services/spring-db.service';
+import { FuncManagerService } from 'src/app/shared/services/func-manager.service';
 
 @Injectable({
   providedIn: 'root'

@@ -1,2 +1,2 @@
 #!/bin/bash
-./mvnw package -DskipTests && java -jar target/*.jar
+./mvnw clean package -DskipTests && java -jar target/*.jar

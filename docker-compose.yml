@@ -21,27 +21,27 @@ services:
         depends_on:
             - mongo
 
-#    graphmanager:
-#        build: spring-func-manager/grafo-func-manager
-#        entrypoint: java -jar /app.jar --server.port=8081
-#        ports:
-#            - 8091:8081
-#        networks:
-#            graph_net:
-#        depends_on:
-#            - graphdb
+    graphmanager:
+        build: spring-func-manager/grafo-func-manager
+        entrypoint: java -jar /app.jar --server.port=8081
+        ports:
+            - 8091:8081
+        networks:
+            graph_net:
+        depends_on:
+            - graphdb
 
-#    angular:
-#        image: nginx:alpine
-#        volumes:
-#            - ./ang/grafo1/dist/grafo1:/usr/share/nginx/html
-#            - ./ang/nginx.conf:/etc/nginx/conf.d/default.conf
-#        ports:
-#            - 80:80
+    angular:
+        image: nginx:alpine
+        volumes:
+            - ./ang/grafo1/dist/grafo1:/usr/share/nginx/html
+            - ./ang/nginx.conf:/etc/nginx/conf.d/default.conf
+        ports:
+            - 80:80
 #        networks:
 #             graph_net:
-#        depends_on:
-#            - graphmanager
+        depends_on:
+            - graphmanager
 
     prom:
         image: prom/prometheus
@@ -49,6 +49,17 @@ services:
             - 8092:9090
         volumes:
             - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+        networks:
+             graph_net:
+
+    grafana:
+        image: grafana/grafana-oss
+        ports:
+            - 8093:3000
+        volumes:
+            - ./grafana:/home/dashboards
+        networks:
+             graph_net:
 
 networks:
     graph_net:

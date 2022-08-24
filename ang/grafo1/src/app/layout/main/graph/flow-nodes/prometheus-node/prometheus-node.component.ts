@@ -16,24 +16,37 @@ import { FlowNodesComponent } from '../flow-nodes.component'
 })
 export class PrometheusNodeComponent extends FlowNodesComponent implements OnDestroy {
   isCollapsed: boolean = true;
+  metric_type_sub: Subscription;
 
   RegExp = RegExp;
 
   constructor(protected fb: FormBuilder, protected gs: GraphEditingService, protected sb: SidebarEditComponent) {
     super(fb, gs, sb, "prometheus", new FormGroup({
       node_metric_type: new FormControl(null, Validators.required),
+      node_histo_start: new FormControl(null),
+      node_histo_width: new FormControl(null),
+      node_histo_count: new FormControl(null),
       node_fields: new FormArray([], Validators.required),
     }));
+
+    this.metric_type_sub = this.flowNodeForm.controls["node_metric_type"].valueChanges.subscribe(x => {
+      this.changedOp(x);
+    });
   }
 
   ngOnDestroy() {
     super.ngOnDestroy();
+    this.metric_type_sub.unsubscribe();
   }
 
   selectedNodeInputChange(node: any) {
     super.selectedNodeInputChange(node);
     const content = JSON.parse(node.content);
     this.getControl("node_metric_type").setValue(content["metric_type"]);
+    this.changedOp(this.getControl("node_metric_type").value);
+    this.getControl("node_histo_start").setValue(content["histo_start"]);
+    this.getControl("node_histo_width").setValue(content["histo_width"]);
+    this.getControl("node_histo_count").setValue(content["histo_count"]);
     this.flowNodeForm.controls["node_fields"] = this.fb.array([], Validators.required);
     content["fields"].forEach((x: string) => {
       this.addField(x);
@@ -48,9 +61,15 @@ export class PrometheusNodeComponent extends FlowNodesComponent implements OnDes
   tryNode() {
     let node = this.retrieveNodeBasics();
     let metric_type = this.getControl("node_metric_type").value;
+    let histo_start = this.getControl("node_histo_start").value;
+    let histo_width = this.getControl("node_histo_width").value;
+    let histo_count = this.getControl("node_histo_count").value;
     let fields: string[] = this.fieldsForm.value.map((x: { field: string }) => x.field);
     let node_content = JSON.stringify({
       "metric_type": metric_type,
+      "histo_start": histo_start,
+      "histo_width": histo_width,
+      "histo_count": histo_count,
       "fields": fields,
     });
     this.writeNode(node, node_content);
@@ -79,6 +98,44 @@ export class PrometheusNodeComponent extends FlowNodesComponent implements OnDes
         if (this.fieldsForm.value.find((element: { field: string }) => element.field == control.value) && control.dirty) {
           return { already: true, msg: "Field already selected" };
         }
+      }
+      return null;
+    }
+  }
+
+  changedOp(selection: string) {
+    if (/.*histogram.*/g.test(selection)) {
+      // this.needSubOp = true;
+      this.getControl("node_histo_start").addValidators([Validators.required]);
+      this.getControl("node_histo_start").updateValueAndValidity();
+      this.getControl("node_histo_width").addValidators([Validators.required, this.widthCheck()]);
+      this.getControl("node_histo_width").updateValueAndValidity();
+      this.getControl("node_histo_count").addValidators([Validators.required, this.countCheck()]);
+      this.getControl("node_histo_count").updateValueAndValidity();
+    } else {
+      // this.needSubOp = false;
+      this.getControl("node_histo_start").clearValidators();
+      this.getControl("node_histo_start").updateValueAndValidity();
+      this.getControl("node_histo_width").clearValidators();
+      this.getControl("node_histo_width").updateValueAndValidity();
+      this.getControl("node_histo_count").clearValidators();
+      this.getControl("node_histo_count").updateValueAndValidity();
+    }
+  }
+
+  widthCheck() {
+    return (control: AbstractControl) => {
+      if (control.dirty && control.value <= 0) {
+        return { negative: true, msg: "The width must be greater than 0" };
+      }
+      return null;
+    }
+  }
+
+  countCheck() {
+    return (control: AbstractControl) => {
+      if (control.dirty && control.value < 1) {
+        return { negative: true, msg: "The count must be at least 1" };
       }
       return null;
     }

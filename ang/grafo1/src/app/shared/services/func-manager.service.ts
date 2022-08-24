@@ -14,7 +14,7 @@ import { has } from 'lodash';
   providedIn: 'root'
 })
 export class FuncManagerService {
-  baseUrl = "http://localhost:8080";
+  baseUrl = "http://localhost:8091"; //change port for docker, 8091(host), 8081(docker network), and 'localhost' to 'graphmanager' (service name in the docker-compose.yml)
   headers = { headers: { "Content-Type": "application/json" } };
   stomp_client: any;
   connected: boolean = false;
@@ -55,7 +55,7 @@ export class FuncManagerService {
     //   });
     // });
 
-    this.client.brokerURL = 'ws://localhost:8080/stomp-endpoint';
+    this.client.brokerURL = 'ws://localhost:8091/stomp-endpoint'; //change port for docker, 8091(host), 8081(docker network), and 'localhost' to 'graphmanager' (service name in docker-compose.yml)
     this.client.debug = () => { };
     this.client.reconnectDelay = 2000;
     this.client.onConnect = () => {
@@ -114,5 +114,9 @@ export class FuncManagerService {
   paintNode(node_id: string, color: "error"|"default"|"success") {
     let node: FlowNode = this.gs.getFlowNode(node_id);
     node.color = color;
+  }
+
+  clear_metrics(): Observable<any> {
+    return this.http.get(this.baseUrl + "/metrics_clear");
   }
 }

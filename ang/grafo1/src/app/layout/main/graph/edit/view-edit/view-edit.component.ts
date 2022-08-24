@@ -51,6 +51,10 @@ export class ViewEditComponent implements OnDestroy, OnChanges {
         this.updateGraph();
       }
     });
+
+    this.graphEditingService.getFlowNodes().forEach((node) => {
+      this.fm.paintNode(node.id, "default");
+    });
   }
 
   ngOnChanges(changes: SimpleChanges): void {

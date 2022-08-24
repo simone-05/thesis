@@ -20,6 +20,6 @@ scrape_configs:
 
   - job_name: 'java_spring_func_manager'
     scrape_interval: 5s
-    metrics_path: /metrics
+    metrics_path: /prom
     static_configs:
-      - targets: ['localhost:8080'] #cambia in 8081, quando uso il container di spring-func-manager
+        - targets: ['graphmanager:8081'] #cambia da localhost:8091 in graphmanager:8081, quando uso il container di spring-func-manager

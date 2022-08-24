@@ -7,7 +7,7 @@ import { Observable } from 'rxjs';
   providedIn: 'root'
 })
 export class SpringDbService {
-  baseUrl = "http://localhost:8090/api/graphs";
+  baseUrl = "http://localhost:8090/api/graphs"; //Change port for docker 8090(host), 8080(docker network), and 'localhost' to 'graphdb' (the service name in the docker-compose.yml)
   headers = { headers: { "Content-Type": "application/json" } };
 
   constructor(private http: HttpClient) { }

@@ -1,11 +1,12 @@
 <div [ngStyle]="{'height': getContentHeight()}">
-  <ngx-graph class="chart-container" [update$]="update$" [nodes]="nodes" [links]="edges" [clusters]="clusters" [layout]="layout">
+  <ngx-graph class="chart-container" [update$]="update$" [center$]="center$" [zoomToFit$]="zoomToFit$"
+    [nodes]="nodes" [links]="edges" [clusters]="clusters" [layout]="layout">
 
     <ng-template #nodeTemplate let-node>
-      <svg xmlns="http://www.w3.org/2000/svg" (mouseenter)="moreNodeDetails(node.id)"
-        (mouseleave)="moreNodeDetails(-1)">
+      <svg xmlns="http://www.w3.org/2000/svg" (mouseenter)="setNodeDetails(node.id)"
+        (mouseleave)="setNodeDetails('-1')" (mouseleave)="setMoreNodeDetails('-1', '')">
         <g *ngIf="node.type=='task'">
-          <g *ngIf="showNodeDetails == node.id">
+          <g *ngIf="nodeDetails == node.id">
             <!-- dettagli -->
             <g *ngFor="let prop of node.properties; let i=index">
               <rect x="0" [attr.y]="(i==0)? 40: 30+((i+1)*30)" width="100" [attr.height]="(i==0)? 70:50" rx="10"
@@ -17,8 +18,8 @@
 
           <!-- tasks -> red -->
           <rect x="0" y="10" width="100" height="50" rx="10" fill="var(--task-node-body-color)"></rect>
-          <rect x="0" y="0" width="100" height="30" rx="10" fill="var(--task-node-body-color)"></rect>
-          <text x="20" y="20" font-size="16" fill="#fff">{{node.id}}</text>
+          <rect x="0" y="0" width="100" height="30" rx="10" fill="var(--task-node-header-color)"></rect>
+          <text x="10" y="20" font-size="16" fill="#fff">{{node.id}}</text>
           <!-- <text x="10" y="50" font-size="16" fill="#fff">{{node.label}}</text> -->
           <text x="10" y="50" font-size="16" fill="#fff">props: {{(Object.entries(node.properties)).length}}</text>
         </g>
@@ -28,7 +29,7 @@
           <circle cx="30" cy="25" [attr.width]="1000" r="25" fill="var(--cond-node-body-color)" />
           <text x="16" y="30" font-size="14" fill="#fff">AND</text>
 
-          <g *ngIf="showNodeDetails == node.id">
+          <g *ngIf="nodeDetails == node.id">
             <!-- dettagli -->
             <g *ngFor="let prop of node.properties; let i=index">
               <rect x="0" [attr.y]="(i==0)? 60: 50+((i+1)*30)" width="100" [attr.height]="(i==0)? 70:50" rx="10"
@@ -47,56 +48,69 @@
         </g>
 
         <g *ngIf="node.type != 'task' && node.type != 'cond' && node.type != 'clus'">
-          <g *ngIf="showNodeDetails == node.id">
+          <g *ngIf="nodeDetails == node.id">
             <!-- dettagli -->
             <!-- <g *ngFor="let prop of node.properties; let i=index">
               <rect x="0" [attr.y]="(i==0)? 40: 30+((i+1)*30)" width="100" [attr.height]="(i==0)? 70:50" rx="10"
-                fill="var(--flow-node-body-color)">
+                fill="var(--flow-node-body-default)">
               </rect>
               <text x="10" [attr.y]="40+((i+1)*35)" font-size="16" fill="#fff">{{prop.name}}: {{prop.value}}</text>
             </g> -->
-              <rect x="0" [attr.y]="40" width="100" [attr.height]="70" rx="10"
-                fill="var(--flow-node-body-color)">
-              </rect>
-              <text x="10" [attr.y]="40+(1*35)+5" font-size="16" fill="#fff">input: {{node.input}}</text>
+            <rect class="node-body-colored" x="0" [attr.y]="40" width="100" [attr.height]="70" rx="10"
+              [attr.fill]="fillFunction(node.id, 'body')">
+            </rect>
+            <text id="node-input-prop" x="10" [attr.y]="40+(1*35)+5" font-size="16" fill="#fff" (mouseenter)="setMoreNodeDetails(node.id, 'input')" [ngbPopover]="popoverContent()" popoverClass="flownode-popover" triggers="mouseenter:mouseleave" container="body" placement="right">Input</text>
 
-              <rect x="0" [attr.y]="30+(2*30)" width="100" [attr.height]="50" rx="10"
-                fill="var(--flow-node-body-color)">
-              </rect>
-              <text x="10" [attr.y]="40+(2*35)" font-size="16" fill="#fff">content: {{node.content}}</text>
+            <rect class="node-body-colored" x="0" [attr.y]="30+(2*30)" width="100" [attr.height]="50" rx="10"
+              [attr.fill]="fillFunction(node.id, 'body')">
+            </rect>
+            <text id="node-content-prop" x="10" [attr.y]="40+(2*35)" font-size="16" fill="#fff" (mouseenter)="setMoreNodeDetails(node.id, 'content')" [ngbPopover]="popoverContent()" popoverClass="flownode-popover" triggers="mouseenter:mouseleave" container="body" placement="right">Content</text>
 
-              <rect x="0" [attr.y]="30+(3*30)" width="100" [attr.height]="50" rx="10"
-                fill="var(--flow-node-body-color)">
-              </rect>
-              <text x="10" [attr.y]="40+(3*35)" font-size="16" fill="#fff">output: {{node.output}}</text>
+            <rect class="node-body-colored" x="0" [attr.y]="30+(3*30)" width="100" [attr.height]="50" rx="10"
+              [attr.fill]="fillFunction(node.id, 'body')">
+            </rect>
+            <text id="node-output-prop" x="10" [attr.y]="40+(3*35)" font-size="16" fill="#fff" (mouseenter)="setMoreNodeDetails(node.id, 'output')" [ngbPopover]="popoverContent()" popoverClass="flownode-popover" triggers="mouseenter:mouseleave" container="body" placement="right">Output</text>
+
+            <!-- <foreignObject x="100" y="0" width="200" height="160" *ngIf="moreNodeDetails.id == node.id" z-index="-100">
+              <div [style.background-color]="'#f0f'" style="width: 100%; height: 100%">
+                <pre style="background: var(--flow-node-body-default); overflow: auto"> {{moreNodeDetails.data}} </pre>
+              </div>
+            </foreignObject> -->
           </g>
 
-          <g *ngIf="node.type == 'inject'" (click)="injection(nodes, node.id)">
+          <!-- Il pulsante di 'injection' -->
+          <g *ngIf="node.type == 'inject'" (click)="injection(nodes, node.id)" ngbTooltip="Press to inject" container="body">
             <rect x="90" y="10" width="35" height="40" rx="10" fill="#223"></rect>
             <rect x="92" y="16.5" width="25" height="25" rx="5" fill="#223"></rect>
           </g>
 
-          <rect x="0" y="10" width="100" height="50" rx="10" fill="var(--flow-node-body-color)"></rect>
-          <rect x="0" y="0" width="100" height="30" rx="10" fill="var(--flow-node-header-color)"></rect>
-          <text x="20" y="20" font-size="16" fill="#fff">{{node.id}}</text>
-          <text x="70" y="20" font-size="16" fill="#fff">{{String(node.type).substr(0,3)}}</text>
-          <!-- <text x="10" y="50" font-size="16" fill="#fff">{{node.label}}</text> -->
-          <text x="10" y="50" font-size="16" fill="#fff">props: {{(Object.entries(node.properties)).length}}</text>
+          <g [ngbTooltip]="node.type+' node'" container="body" tooltipClass="custom-tooltip-node-type" [openDelay]="700">
+            <rect class="node-body-colored" x="0" y="10" width="100" height="50" rx="10" [attr.fill]="fillFunction(node.id, 'body')"></rect>
+            <rect class="node-header-colored" x="0" y="0" width="100" height="30" rx="10" [attr.fill]="fillFunction(node.id, 'header')"></rect>
+            <!-- <foreignObject x="0" y="0" width="50" height="50">
+              <div style="width: 200px; height: 200px; background-color: purple;" ngbPopover="Ciao" popoverClass="flownode-popover" triggers="mouseenter:mouseleave" placement="left" container="body">
+              </div>
+            </foreignObject> -->
+            <text x="10" y="20" font-size="16" fill="#fff"> {{node.id}} </text>
+            <!-- <text x="70" y="20" font-size="16" fill="#fff">{{String(node.type).substr(0,3)}}</text> -->
+            <!-- <text x="10" y="50" font-size="16" fill="#fff">{{node.label}}</text> -->
+            <!-- <text x="10" y="50" font-size="16" fill="#fff">props: {{(Object.entries(node.properties)).length}}</text> -->
+            <text x="10" y="50" font-size="16" fill="#fff">{{node.type}}</text>
+          </g>
+
         </g>
-
-
       </svg>
     </ng-template>
 
 
     <ng-template #linkTemplate let-link>
-      <svg:g class="edge" (mouseenter)="moreEdgeDetails(link.id)"
-        (mouseleave)="moreEdgeDetails(0)">
+      <svg:g class="edge" (mouseenter)="setEdgeDetails(link.id)"
+        (mouseleave)="setEdgeDetails('0')">
         <svg:circle width="15" height="15" fill="#000"></svg:circle>
         <svg:path class="line"
           [ngClass]="{'edge-success': this.checkConditions(link)==2, 'edge-insuccess': this.checkConditions(link)==1}"
           stroke-width="5" marker-end="url(#arrow)"></svg:path>
-        <svg:text *ngIf="showEdgeDetails == link.id" class="edge-label" text-anchor="middle">
+        <svg:text *ngIf="edgeDetails == link.id" class="edge-label" text-anchor="middle">
           <textPath class="text-path" [attr.href]="'#' + link.id" [style.dominant-baseline]="link.dominantBaseline"
             style="font-size: 20px;" startOffset="50%">
             {{link.weight}}
@@ -112,10 +126,10 @@
     </ng-template>
 
     <ng-template #clusterTemplate let-cluster>
-      <svg:g class="node cluster" (mouseenter)="moreClusterDetails(cluster.id)" (mouseleave)="moreClusterDetails(0)">
+      <svg:g class="node cluster" (mouseenter)="setClusterDetails(cluster.id)" (mouseleave)="setClusterDetails('0')">
         <svg:rect x="10" y="10" rx="5" ry="5" [attr.width]="cluster.dimension.width" [attr.height]="cluster.dimension.height" stroke="#000" stroke-width="5" fill="#0005"/>
         <text x="20" y="30" font-size="16" fill="#000">OR</text>
-        <g *ngIf="showClusterDetails == cluster.id">
+        <g *ngIf="clusterDetails == cluster.id">
           <!-- <text x="110" y="130" font-size="16" fill="#000">ID: {{cluster.id}}</text> -->
         </g>
       </svg:g>
@@ -123,9 +137,4 @@
     <!-- height (..)-180 -->
 
   </ngx-graph>
-
-  <!-- <foreignObject>
-    <xhtml:span class="tooltip-node">
-    </html:span>
-  </foreignObject> -->
 </div>

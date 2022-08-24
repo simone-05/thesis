@@ -48,6 +48,24 @@
         </div>
       </div>
     </div>
+    <div *ngIf="RegExp('.*histogram.*').test(flowNodeForm.controls['node_metric_type'].value)">
+      <div class="form-floating">
+        <input class="form-control my-2 " type="number" formControlName="node_histo_start" placeholder="Histogram start value" [ngClass]="{'is-invalid': !flowNodeForm.controls['node_histo_start'].valid}">
+        <p class="text-danger text-start my-0" *ngIf="flowNodeForm.controls['node_histo_start'].errors">{{flowNodeForm.controls['node_histo_start'].errors?.['msg']}}</p>
+        <label>Histogram start value</label>
+      </div>
+      <div class="form-floating">
+        <input class="form-control my-2 " type="number" formControlName="node_histo_width" placeholder="Histogram width" [ngClass]="{'is-invalid': !flowNodeForm.controls['node_histo_width'].valid}">
+        <p class="text-danger text-start my-0" *ngIf="flowNodeForm.controls['node_histo_width'].errors">{{flowNodeForm.controls['node_histo_width'].errors?.['msg']}}</p>
+        <label>Histogram width</label>
+      </div>
+      <div class="form-floating">
+        <input class="form-control my-2 " type="number" formControlName="node_histo_count" placeholder="Histogram count" [ngClass]="{'is-invalid': !flowNodeForm.controls['node_histo_count'].valid}">
+        <p class="text-danger text-start my-0" *ngIf="flowNodeForm.controls['node_histo_count'].errors">{{flowNodeForm.controls['node_histo_count'].errors?.['msg']}}</p>
+        <label>Histogram count</label>
+      </div>
+    </div>
+
 
 
     <div class="d-flex">
