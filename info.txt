@@ -1,5 +1,6 @@
 Per avviare usa 'docker-compose up -d'
 
-Se faccio modifiche e voglio aggiornare i servizi in springboot, prima costruisco il loro eseguibile nelle rispettive cartelle, con ./mvnw clean package -DskipTests, dopodichè dico a docker di rebuildare le loro immagini, con docker-compose up --build -d <servizio>'
+Se faccio modifiche e voglio aggiornare i servizi in springboot, prima costruisco il loro eseguibile nelle rispettive cartelle, con ./mvnw clean package -DskipTests, dopodichè dico a docker di rebuildare le loro immagini, con 'docker-compose build <servizio>' e poi 'docker-compose restart <servizio>'
+Oppure restarto tutto aggiungendo --build: 'docker-compose up --build -d <servizio>'
 
 Per rebuildare angular, devo fare 'ng build' nella root del progetto. Non ha immagine docker, ma volume quindi lo prende aggiornato in automatico.

@@ -130,6 +130,8 @@ $form-floating-height: add(2.6rem, $input-height-border); //riduco l'altezza del
 
 .flownode-popover {
   margin-left: 1rem;
+  max-height: 300px; //altezza massima del popover
+  overflow: hidden; //il testo all'interno che va oltre, viene nascosto
 }
 
 .custom-popover {

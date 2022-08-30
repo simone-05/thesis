@@ -59,7 +59,7 @@ export class FuncManagerService {
     this.client.debug = () => { };
     this.client.reconnectDelay = 2000;
     this.client.onConnect = () => {
-      this.updateGraph(this.gs.graph).subscribe();
+      this.updateGraph(this.gs.graph).subscribe(); //subscribe altrimenti non effettua la richiesta
       const subscription = this.client.subscribe('/topic/debug', (data: any) => {
         data = data.body;
         const msg = JSON.parse(data);
@@ -93,6 +93,7 @@ export class FuncManagerService {
     // this.connected = false;
     // // console.log('Disconnected!');
 
+    console.log("Disconnecting");
     this.client.deactivate();
   }
 

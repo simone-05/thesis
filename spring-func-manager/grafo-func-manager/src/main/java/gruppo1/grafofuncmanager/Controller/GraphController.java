@@ -6,9 +6,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Set;
-import java.util.Map;
-import java.util.Map.Entry;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
@@ -19,7 +16,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.MessageMapping;
-import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -38,11 +34,8 @@ import com.mongodb.client.MongoCollection;
 // import com.mongodb.reactivestreams.client.MongoDatabase;
 // import com.mongodb.reactivestreams.client.MongoCollection;
 
-import com.google.gson.Gson;
-import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.InvalidPathException;
 import com.jayway.jsonpath.JsonPath;
-import com.jayway.jsonpath.JsonPathException;
 
 import gruppo1.grafofuncmanager.Functions.NumbersFns;
 import gruppo1.grafofuncmanager.Functions.StringsFns;
@@ -54,7 +47,6 @@ import io.prometheus.client.Counter;
 import io.prometheus.client.Gauge;
 import io.prometheus.client.Histogram;
 import io.prometheus.client.Summary;
-import io.prometheus.client.Collector.MetricFamilySamples;
 import io.prometheus.client.exporter.common.TextFormat;
 
 import org.bson.Document;
@@ -176,7 +168,7 @@ class GraphController {
 
     /**
      * Breadth first search, visita del grafo per trasmettere il messaggio ed eseguire le operaioni man mano
-     * @param input
+     * @param input node where to start the visit
      */
     private void bfs(Flownode input) {
         // boolean visited[] = new boolean[graph.getNodes().length];
@@ -240,6 +232,7 @@ class GraphController {
         try {
             switch (node.getType()) {
             case "debug":
+                node.setOutput(""); // ripulisco l'output da eventuale precedente errore
                 if (!node.getInput().isEmpty()) {
                     String output = new JSONObject(node.getInput()).getJSONArray("data").toString();
                     sendResponse(output, node.getId());
@@ -344,39 +337,23 @@ class GraphController {
     }
 
     /**
-     * Funzione per processare un JsonPath path, con la sua sintassi, e ottenere una lista dei singoli path fino alle chiavi, ad esempio $.[2-4].a otteniamo ["$.[2].a", "$.[3].a"]
-     * @param query la stringa immessa nel campo 'field' dei nodi
-     * @param data il json array della chiave 'data' dell'input come stringa
-     * @return L'array con i vari path alle chiavi singoli
+     * Get a Double from integer, String or net.minidev.json.JSONArray  
+     * @param o can be a string, integer or net.minidev.json.JSONArray
      */
-    private List<String> jsonQuery(String data, String query) {
-        List<String> res = new ArrayList<>();
-
-        if (JsonPath.read(data, query).toString().charAt(0) != '[') {
-            // Un solo campo
-            res.add(query);
+    private Double getDouble(Object o) {
+        Double x = 0.0;
+        if (o instanceof String) {
+            x = Double.parseDouble((String)o);
+        }else if (o instanceof Integer) {
+            x = (double)(int)o;
+        }else if (o instanceof net.minidev.json.JSONArray) {
+            net.minidev.json.JSONArray ja = (net.minidev.json.JSONArray)o;
+            o = ja.get(ja.size()-1);
+            return getDouble(o);
         } else {
-            List<String> path_list = new ArrayList<String>();
-            String[] s = query.split("[.]");
-            for (int i = 0; i < s.length; i++) {
-                path_list.add(s[i]);
-            }
-            for (int i = 0; i < path_list.size(); i++) {
-                String path_piece = path_list.get(i);
-                Pattern pattern = Pattern.compile("^\\w|\\[\\?|\\[\"|\\[\\d\\]|\\[-\\d\\]");
-                Matcher matcher = pattern.matcher(path_piece);
-                while (matcher.find()) {
-                    path_list.remove(path_piece);
-                }
-            }
-            for (int i=0;i<path_list.size();i++) {
-                int index = query.indexOf(path_list.get(i));
-                String single_path = query.substring(0, index+(path_list.get(i).length()));
-                System.out.println(single_path); //mostra il path fino al primo array
-            }
+            x = (double)o;
         }
-        
-        return res;
+        return x;
     }
 
     /**
@@ -394,8 +371,6 @@ class GraphController {
             fields.add(obj.toString());
         }
         String regex_pattern = "";
-
-        jsonQuery(new JSONObject(node.getInput()).getJSONArray("data").get(0).toString(), fields.get(0));
 
         // Catch errors for each field: type is not double, the field is not present in
         // all documents
@@ -451,7 +426,7 @@ class GraphController {
                                 return false;
                             }
                         } else {
-                            data = JsonPath.parse(data).set(path, StringsFns.getInstance().toLower(s)).jsonString();
+                            data = JsonPath.parse(data).set(path, StringsFns.getInstance().toUpper(s)).jsonString();
                         }
                     }
                 }
@@ -879,9 +854,9 @@ class GraphController {
                 }
                 break;
             default:
-                break;
+            break;
         }
-
+        
         JSONObject output_json = new JSONObject().put("data", new JSONArray(data));
         node.setOutput(output_json.toString());
         return true;
@@ -1031,6 +1006,10 @@ class GraphController {
                         // }
                         String metric_name = "doc_" + i + "_" + field+"_counter";
                         Boolean found = false;
+                        // If the value is not present, we skip it
+                        if (((net.minidev.json.JSONArray) JsonPath.read(data, path)).size() == 0) {
+                            continue;
+                        }
                         for (Counter c : counters_list) {
                             if (c.describe().get(0).name.equals(metric_name)) {
                                 c.inc();
@@ -1058,13 +1037,11 @@ class GraphController {
                         field = field.replaceAll("[.]", "_");
                         String metric_name = "doc_" + i + "_" + field+"_gauge";
                         Boolean found = false;
-                        double value;
-                        if (JsonPath.read(data, path) instanceof Integer) {
-                            int x = JsonPath.read(data, path);
-                            value = (double) x;
-                        } else {
-                            value = JsonPath.read(data, path);
+                        // If the value is not present, we skip it
+                        if (((net.minidev.json.JSONArray)JsonPath.read(data,path)).size() == 0) {
+                            continue;
                         }
+                        double value = getDouble(JsonPath.read(data,path));
                         for (Gauge g: gauges_list) {
                             if (g.describe().get(0).name.equals(metric_name)) {
                                 g.set(value);
@@ -1098,13 +1075,11 @@ class GraphController {
                         field = field.replaceAll("[.]", "_");
                         String metric_name = "doc_" + i + "_" + field + "_histogram";
                         Boolean found = false;
-                        double value;
-                        if (JsonPath.read(data, path) instanceof Integer) {
-                            int x = JsonPath.read(data, path);
-                            value = (double) x;
-                        } else {
-                            value = JsonPath.read(data, path);
+                        // If the value is not present, we skip it
+                        if (((net.minidev.json.JSONArray) JsonPath.read(data, path)).size() == 0) {
+                            continue;
                         }
+                        double value = getDouble(JsonPath.read(data,path));
                         for (Histogram h : histograms_list) {
                             if (h.describe().get(0).name.equals(metric_name)) {
                                 h.observe(value);
@@ -1141,13 +1116,11 @@ class GraphController {
                         field = field.replaceAll("[.]", "_");
                         String metric_name = "doc_" + i + "_" + field + "_summary";
                         Boolean found = false;
-                        double value;
-                        if (JsonPath.read(data, path) instanceof Integer) {
-                            int x = JsonPath.read(data, path);
-                            value = (double) x;
-                        } else {
-                            value = JsonPath.read(data, path);
+                        // If the value is not present, we skip it
+                        if (((net.minidev.json.JSONArray)JsonPath.read(data,path)).size() == 0) {
+                            continue;
                         }
+                        double value = getDouble(JsonPath.read(data,path));
                         for (Summary s : summaries_list) {
                             if (s.describe().get(0).name.equals(metric_name)) {
                                 s.observe(value);

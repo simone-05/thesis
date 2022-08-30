@@ -62,15 +62,17 @@
       </div>
     </div>
 
-    <div *ngIf="RegExp('regex*').test(flowNodeForm.controls['node_operation'].value)" class="form-floating">
-      <input class="form-control my-2 " type="text" formControlName="node_regex_pattern" placeholder="regex pattern" [ngClass]="{'is-invalid': !flowNodeForm.controls['node_regex_pattern'].valid}">
-      <p class="text-danger text-start my-0" *ngIf="flowNodeForm.controls['node_regex_pattern'].errors">{{flowNodeForm.controls['node_regex_pattern'].errors?.['msg']}}</p>
-      <label>regex pattern</label>
-    </div>
-    <div *ngIf="RegExp('.*replace.*').test(flowNodeForm.controls['node_sub_operation'].value)" class="form-floating">
-      <input class="form-control my-2 " type="text" formControlName="node_regex_replace" placeholder="regex pattern" [ngClass]="{'is-invalid': !flowNodeForm.controls['node_regex_replace'].valid}">
-      <p class="text-danger text-start my-0" *ngIf="flowNodeForm.controls['node_regex_replace'].errors">{{flowNodeForm.controls['node_regex_replace'].errors?.['msg']}}</p>
-      <label>replace with</label>
+    <div *ngIf="RegExp('regex*').test(flowNodeForm.controls['node_operation'].value)">
+      <div class="form-floating">
+        <input class="form-control my-2 " type="text" formControlName="node_regex_pattern" placeholder="regex pattern" [ngClass]="{'is-invalid': !flowNodeForm.controls['node_regex_pattern'].valid}">
+        <p class="text-danger text-start my-0" *ngIf="flowNodeForm.controls['node_regex_pattern'].errors">{{flowNodeForm.controls['node_regex_pattern'].errors?.['msg']}}</p>
+        <label>regex pattern</label>
+      </div>
+      <div *ngIf="RegExp('.*replace.*').test(flowNodeForm.controls['node_sub_operation'].value)" class="form-floating">
+        <input class="form-control my-2 " type="text" formControlName="node_regex_replace" placeholder="regex pattern" [ngClass]="{'is-invalid': !flowNodeForm.controls['node_regex_replace'].valid}">
+        <p class="text-danger text-start my-0" *ngIf="flowNodeForm.controls['node_regex_replace'].errors">{{flowNodeForm.controls['node_regex_replace'].errors?.['msg']}}</p>
+        <label>replace with</label>
+      </div>
     </div>
 
     <div class="d-flex">
