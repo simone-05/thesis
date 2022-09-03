@@ -27,6 +27,7 @@ export class PrometheusNodeComponent extends FlowNodesComponent implements OnDes
       node_histo_width: new FormControl(null),
       node_histo_count: new FormControl(null),
       node_fields: new FormArray([], Validators.required),
+      node_metric_name: new FormControl(null),
     }));
 
     this.metric_type_sub = this.flowNodeForm.controls["node_metric_type"].valueChanges.subscribe(x => {
@@ -51,6 +52,7 @@ export class PrometheusNodeComponent extends FlowNodesComponent implements OnDes
     content["fields"].forEach((x: string) => {
       this.addField(x);
     });
+    this.getControl("node_metric_name").setValue(content["metric_name"]);
     this.flowNodeForm.updateValueAndValidity(); // NECESSARIO SE NON CI FOSSE la funzione changedop che lo fa già
   }
 
@@ -64,6 +66,7 @@ export class PrometheusNodeComponent extends FlowNodesComponent implements OnDes
     let histo_start = this.getControl("node_histo_start").value;
     let histo_width = this.getControl("node_histo_width").value;
     let histo_count = this.getControl("node_histo_count").value;
+    let metric_name = this.getControl("node_metric_name").value;
     let fields: string[] = this.fieldsForm.value.map((x: { field: string }) => x.field);
     let node_content = JSON.stringify({
       "metric_type": metric_type,
@@ -71,6 +74,7 @@ export class PrometheusNodeComponent extends FlowNodesComponent implements OnDes
       "histo_width": histo_width,
       "histo_count": histo_count,
       "fields": fields,
+      "metric_name": metric_name,
     });
     this.writeNode(node, node_content);
   }

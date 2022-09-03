@@ -68,6 +68,7 @@ public class NumbersFns {
     }
 
     public Double max(List<Double> x) {
+        if (x.size() == 0) return .0;
         Double max = x.get(0);
         for (int i=1;i<x.size();i++){
             if(x.get(i)>x.get(i-1)) {
@@ -78,6 +79,7 @@ public class NumbersFns {
     }
 
     public Double min(List<Double> x) {
+        if (x.size() == 0) return .0;
         Double min = x.get(0);
         for (int i=1;i<x.size();i++){
             if(x.get(i)<x.get(i-1)) {
@@ -88,6 +90,7 @@ public class NumbersFns {
     }
 
     public Double sum(List<Double> x) {
+        if (x.size() == 0) return .0;
         Double sum = x.get(0);
         for (int i=1;i<x.size();i++){
             sum += x.get(i);
@@ -96,6 +99,7 @@ public class NumbersFns {
     }
 
     public Double avg(List<Double> x) {
+        if (x.size() == 0) return .0;
         Double sum = sum(x);
         return sum/x.size();
     }

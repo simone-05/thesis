@@ -48,6 +48,11 @@
         </div>
       </div>
     </div>
+    <div class="form-floating">
+      <input class="form-control my-2" type="text" formControlName="node_metric_name" placeholder="Metric custom name" ngbPopover="If you want to specify a custom metric name, taken from this field's value" popoverClass="custom-popover" triggers="mouseenter:mouseleave" [openDelay]="400">
+      <!-- <p class="text-danger text-start my-0" *ngIf="flowNodeForm.controls['node_collection'].errors">{{flowNodeForm.controls['node_collection'].errors?.['msg']}}</p> -->
+      <label>Metric custom name</label>
+    </div>
     <div *ngIf="RegExp('.*histogram.*').test(flowNodeForm.controls['node_metric_type'].value)">
       <div class="form-floating">
         <input class="form-control my-2 " type="number" formControlName="node_histo_start" placeholder="Histogram start value" [ngClass]="{'is-invalid': !flowNodeForm.controls['node_histo_start'].valid}">

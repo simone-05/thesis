@@ -3,6 +3,7 @@ package gruppo1.grafofuncmanager.Controller;
 import java.io.IOException;
 import java.io.Writer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -28,6 +29,9 @@ import org.springframework.web.bind.annotation.RestController;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.model.Accumulators;
+import com.mongodb.client.model.Aggregates;
+import com.mongodb.client.model.Sorts;
 import com.mongodb.client.MongoCollection;
 // import com.mongodb.reactivestreams.client.MongoClient;
 // import com.mongodb.reactivestreams.client.MongoClients;
@@ -883,7 +887,11 @@ class GraphController {
             return false;
         }
         List<Document> docs = new ArrayList<>();
-        col.find().into(docs);
+        col.aggregate(Arrays.asList(
+            Aggregates.sort(Sorts.ascending("timestamp")),
+            Aggregates.group("$device_id", Accumulators.sum("count", 1), Accumulators.push("records", "$$ROOT"))
+        )).into(docs);
+        // col.find().into(docs);
         for (Document document : docs) {
             output_json.append("data", document);
         }
@@ -959,6 +967,7 @@ class GraphController {
         final JSONObject content_json = new JSONObject(node.getContent());
         // final String field = content_json.getString("field");
         final String metric_type = content_json.getString("metric_type");
+        final String custom_metric_name = content_json.optString("metric_name");
         // final String[] histo_string_buckets = content_json.getString("histogram_buckets").split(",");
         // List<Double> histo_buckets = new ArrayList<Double>();
         List<String> fields = new ArrayList<>();
@@ -1004,10 +1013,17 @@ class GraphController {
                         // if (key.charAt(0) == '[') {
                         //     key = x[x.length - 2]; // if is an array
                         // }
-                        String metric_name = "doc_" + i + "_" + field+"_counter";
+                        String metric_name = "";
+                        if (custom_metric_name.isEmpty()) {
+                            metric_name = "doc_" + i + "_" + field + "_counter";
+                        } else {
+                            metric_name = JsonPath.read(data, "$.[" + i + "]." + custom_metric_name) + "_" + field
+                                    + "_counter";
+                        }
                         Boolean found = false;
                         // If the value is not present, we skip it
-                        if (((net.minidev.json.JSONArray) JsonPath.read(data, path)).size() == 0) {
+                        if (JsonPath.read(data, path) instanceof net.minidev.json.JSONArray
+                                && ((net.minidev.json.JSONArray) JsonPath.read(data, path)).size() == 0) {
                             continue;
                         }
                         for (Counter c : counters_list) {
@@ -1035,10 +1051,16 @@ class GraphController {
                     for (String field : fields) {
                         String path = "$.[" + i + "]." + field;
                         field = field.replaceAll("[.]", "_");
-                        String metric_name = "doc_" + i + "_" + field+"_gauge";
+                        String metric_name = "";
+                        if (custom_metric_name.isEmpty()) {
+                            metric_name = "doc_" + i + "_" + field+"_gauge";
+                        } else {
+                            metric_name = JsonPath.read(data, "$.["+i+"]."+custom_metric_name)+"_"+field+"_gauge";
+                        }
                         Boolean found = false;
                         // If the value is not present, we skip it
-                        if (((net.minidev.json.JSONArray)JsonPath.read(data,path)).size() == 0) {
+                        if (JsonPath.read(data, path) instanceof net.minidev.json.JSONArray
+                                && ((net.minidev.json.JSONArray) JsonPath.read(data, path)).size() == 0) {
                             continue;
                         }
                         double value = getDouble(JsonPath.read(data,path));
@@ -1073,10 +1095,16 @@ class GraphController {
                     for (String field : fields) {
                         String path = "$.[" + i + "]." + field;
                         field = field.replaceAll("[.]", "_");
-                        String metric_name = "doc_" + i + "_" + field + "_histogram";
+                        String metric_name = "";
+                        if (custom_metric_name.isEmpty()) {
+                            metric_name = "doc_" + i + "_" + field + "_histogram";
+                        } else {
+                            metric_name = JsonPath.read(data, "$.[" + i + "]." + custom_metric_name) + "_" + field
+                                    + "_histogram";
+                        }                        
                         Boolean found = false;
                         // If the value is not present, we skip it
-                        if (((net.minidev.json.JSONArray) JsonPath.read(data, path)).size() == 0) {
+                        if (JsonPath.read(data,path) instanceof net.minidev.json.JSONArray && ((net.minidev.json.JSONArray) JsonPath.read(data, path)).size() == 0) {
                             continue;
                         }
                         double value = getDouble(JsonPath.read(data,path));
@@ -1114,10 +1142,17 @@ class GraphController {
                     for (String field : fields) {
                         String path = "$.[" + i + "]." + field;
                         field = field.replaceAll("[.]", "_");
-                        String metric_name = "doc_" + i + "_" + field + "_summary";
+                        String metric_name = "";
+                        if (custom_metric_name.isEmpty()) {
+                            metric_name = "doc_" + i + "_" + field + "_summary";
+                        } else {
+                            metric_name = JsonPath.read(data, "$.[" + i + "]." + custom_metric_name) + "_" + field
+                                    + "_summary";
+                        }
                         Boolean found = false;
                         // If the value is not present, we skip it
-                        if (((net.minidev.json.JSONArray)JsonPath.read(data,path)).size() == 0) {
+                        if (JsonPath.read(data, path) instanceof net.minidev.json.JSONArray
+                                && ((net.minidev.json.JSONArray) JsonPath.read(data, path)).size() == 0) {
                             continue;
                         }
                         double value = getDouble(JsonPath.read(data,path));

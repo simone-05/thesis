@@ -93,7 +93,6 @@ export class FuncManagerService {
     // this.connected = false;
     // // console.log('Disconnected!');
 
-    console.log("Disconnecting");
     this.client.deactivate();
   }
 

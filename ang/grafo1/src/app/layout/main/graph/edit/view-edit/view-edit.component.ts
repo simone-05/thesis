@@ -226,7 +226,7 @@ export class ViewEditComponent implements OnDestroy, OnChanges {
       data = node[type];
       if (data) { //se il nodo ha il campo input|output|content
         data = JSON.parse(data);
-        data = JSON.stringify(data, null, 4);
+        data = JSON.stringify(data, null, 4).substring(0,1000); //Altrimenti tra l'hover del mouse e quando appare il popup, passerà tanto tempo e l'app si blocca
       }
     }
     this.moreNodeDetails = {id, type, data};
@@ -259,4 +259,10 @@ export class ViewEditComponent implements OnDestroy, OnChanges {
     if (this.moreNodeDetails.data) return " ";
     else return "";
   } */
+
+  putNodeId(id: string) {
+    if (id.length > 8) {
+      return id.substring(0,8)+"...";
+    } else return id;
+  }
 }

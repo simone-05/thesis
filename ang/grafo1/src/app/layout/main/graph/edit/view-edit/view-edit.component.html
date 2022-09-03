@@ -84,14 +84,14 @@
             <rect x="92" y="16.5" width="25" height="25" rx="5" fill="#223"></rect>
           </g>
 
-          <g [ngbTooltip]="node.type+' node'" container="body" tooltipClass="custom-tooltip-node-type" [openDelay]="700">
+          <g [ngbTooltip]="node.id" container="body" tooltipClass="custom-tooltip-node-type" [openDelay]="400">
             <rect class="node-body-colored" x="0" y="10" width="100" height="50" rx="10" [attr.fill]="fillFunction(node.id, 'body')"></rect>
             <rect class="node-header-colored" x="0" y="0" width="100" height="30" rx="10" [attr.fill]="fillFunction(node.id, 'header')"></rect>
             <!-- <foreignObject x="0" y="0" width="50" height="50">
               <div style="width: 200px; height: 200px; background-color: purple;" ngbPopover="Ciao" popoverClass="flownode-popover" triggers="mouseenter:mouseleave" placement="left" container="body">
               </div>
             </foreignObject> -->
-            <text x="10" y="20" font-size="16" fill="#fff"> {{node.id}} </text>
+            <text x="10" y="20" font-size="16" fill="#fff"> {{putNodeId(node.id)}} </text>
             <!-- <text x="70" y="20" font-size="16" fill="#fff">{{String(node.type).substr(0,3)}}</text> -->
             <!-- <text x="10" y="50" font-size="16" fill="#fff">{{node.label}}</text> -->
             <!-- <text x="10" y="50" font-size="16" fill="#fff">props: {{(Object.entries(node.properties)).length}}</text> -->
