@@ -16,6 +16,8 @@ import { FlowNodesComponent } from '../flow-nodes.component';
 export class FieldsSelectNodeComponent extends FlowNodesComponent implements OnDestroy {
   isCollapsed: boolean = true;
 
+  RegExp = RegExp;
+
   constructor(protected fb: FormBuilder, protected gs: GraphEditingService, protected sb: SidebarEditComponent) {
     super(fb, gs, sb, "fields-sel", new FormGroup({
       node_operation: new FormControl(null, Validators.required),
@@ -33,9 +35,10 @@ export class FieldsSelectNodeComponent extends FlowNodesComponent implements OnD
     this.getControl("node_operation").setValue(content["operation"]);
     // this.getControl("node_fields").setValue(content["fields"]);
     this.flowNodeForm.controls["node_fields"] = new FormArray([], Validators.required);
-    content["fields"].forEach((x: string) => {
-      this.addField(x);
-    });
+    for (let i = 0; i < content["fields"].length; i++) {
+      const element = {"field": content["fields"][i], "new_field":content["new_fields"][i]};
+      this.addField(element);
+    }
     this.flowNodeForm.updateValueAndValidity(); //NECESSARIO
   }
 
@@ -48,9 +51,11 @@ export class FieldsSelectNodeComponent extends FlowNodesComponent implements OnD
     let operation = this.getControl("node_operation").value;
     // let fields: string[] = this.getControl("node_fields").value.toString().split(",").map((x: string) => x.trim()).filter((x: string) => x);
     let fields: string[] = this.fieldsForm.value.map((x: { field: string }) => x.field);
+    let new_fields: string[] = this.fieldsForm.value.map((x: { new_field: string }) => x.new_field);
     let node_content = JSON.stringify({
       "operation": operation,
       "fields": fields,
+      "new_fields": new_fields,
     });
     this.writeNode(node, node_content);
   }
@@ -60,9 +65,10 @@ export class FieldsSelectNodeComponent extends FlowNodesComponent implements OnD
     this.flowNodeForm.controls["node_fields"] = this.fb.array([], Validators.required);
   }
 
-  addField(field_name?: string) {
+  addField(element?: any) {
     const dato = this.fb.group({
-      field: [(field_name) ? field_name : null, [Validators.required, this.checkField()]]
+      field: [(element) ? element.field : null, [Validators.required, this.checkField()]],
+      new_field: [(element) ? element.new_field: "",[this.checkNewField()]],
     });
     this.fieldsForm.push(dato);
   }
@@ -78,7 +84,18 @@ export class FieldsSelectNodeComponent extends FlowNodesComponent implements OnD
         if (RegExp("^[.]|[.]$").test(control.value)) {
           return { startEndDots: true, msg: "Can't start or end with dots" };
         }
-        if (this.fieldsForm.value.find((element: { field: string }) => element.field == control.value) && control.dirty) {
+        if (this.fieldsForm.value.find((element: { field: string, new_field: string }) => element.field == control.value) && control.dirty) {
+          return { already: true, msg: "Field already selected" };
+        }
+      }
+      return null;
+    }
+  }
+
+  checkNewField(): ValidatorFn {
+    return (control) => {
+      if (control.value) {
+        if (this.fieldsForm.value.find((element: { field: string, new_field: string }) => element.field == control.value) && control.dirty) {
           return { already: true, msg: "Field already selected" };
         }
       }

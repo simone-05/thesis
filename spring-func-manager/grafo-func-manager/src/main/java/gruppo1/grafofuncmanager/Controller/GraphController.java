@@ -817,6 +817,10 @@ class GraphController {
         for (Object obj : content.getJSONArray("fields")) {
             fields.add(obj.toString());
         }
+        List<String> new_fields = new ArrayList<>();
+        for (Object obj : content.getJSONArray("new_fields")) {
+            new_fields.add(obj.toString());
+        }
 
         // Catch errors: at least one document must have the field
         for (String field : fields) {
@@ -838,13 +842,21 @@ class GraphController {
                 JSONArray out_arr_json = new JSONArray(out_arr);
                 for (int i = 0; i < doc_count; i++) {
                     JSONObject js_obj = new JSONObject();
+                    int field_count = 0;
                     for (String field : fields) {
+                        System.out.println("Field: "+field+", new field: "+new_fields.get(field_count)+", is blank? "+new_fields.get(field_count).isBlank());
                         String path = "$.["+i+"]."+field;
-                        String[] x = field.split("[.]");
-                        String key = x[x.length-1];
-                        if (key.charAt(0) == '[') key = x[x.length-2]; //if is an array
+                        String key = "";
+                        if (new_fields.get(field_count).isBlank()) {
+                            String[] x = field.split("[.]");
+                            key = x[x.length-1];
+                            if (key.charAt(0) == '[') key = x[x.length-2]; //if is an array
+                        } else {
+                            key = new_fields.get(field_count);
+                        }
                         js_obj.put(key, (Object)JsonPath.parse(data).read(path));
                         out_arr_json.put(i, js_obj);
+                        field_count++;
                     }
                 }
                 data = out_arr_json.toString(); 

@@ -30,7 +30,7 @@
           </button>
         </div>
         <div #collapse="ngbCollapse" [(ngbCollapse)]="isCollapsed">
-          <div formArrayName="node_fields">
+          <!-- <div formArrayName="node_fields">
             <div class="row pb-2 px-4 align-items-center" *ngFor="let item of fieldsForm.controls; let i=index" [formGroupName]="i">
               <div class="col-10 p-0 ps-2 pe-1" style="overflow-x: auto">
                 <input type="text" class="form-control" formControlName="field" placeholder="field name" (input)="flowNodeForm.updateValueAndValidity()" [ngClass]="{'is-invalid': !fieldsForm.get(i+'.field')?.valid}">
@@ -40,7 +40,22 @@
               </div>
               <small class="text-danger text-start my-0" *ngIf="!fieldsForm.get(i+'.field')?.valid">{{fieldsForm.get(i+'.field')?.errors?.['msg']}}</small>
             </div>
-          </div>
+          </div> -->
+                  <div formArrayName="node_fields">
+                    <div class="row pb-2 px-4 align-items-center" *ngFor="let item of fieldsForm.controls; let i=index" [formGroupName]="i">
+                      <div class="col-5 p-0 ps-2 pe-1" style="overflow-x: auto">
+                        <input type="text" class="form-control" formControlName="field" placeholder="field name" (input)="flowNodeForm.updateValueAndValidity()" [ngClass]="{'is-invalid': !fieldsForm.get(i+'.field')?.valid}">
+                      </div>
+                      <div class="col-5 p-0 px-1 ps-2" style="overflow-x: auto">
+                        <input type="text" class="form-control" formControlName="new_field" placeholder="new field name" (input)="flowNodeForm.updateValueAndValidity()" [ngClass]="{'is-invalid': !fieldsForm.get(i+'.new_field')?.valid}">
+                      </div>
+                      <div class="col-2 p-1 pt-1 btn btn-danger" *ngIf="item" (click)="removeField(i)">
+                        <img src="../../../../../../assets/images/x-white.svg" alt="Delete field" width="24">
+                      </div>
+                      <small class="text-danger text-start my-0" *ngIf="!fieldsForm.get(i+'.field')?.valid">{{fieldsForm.get(i+'.field')?.errors?.['msg']}}</small>
+                      <small class="text-danger text-start my-0" *ngIf="!fieldsForm.get(i+'.new_field')?.valid">{{fieldsForm.get(i+'.new_field')?.errors?.['msg']}}</small>
+                    </div>
+                  </div>
           <div *ngIf="fieldsForm?.value.length == 0" class="row px-4 pb-2 text-center">
             <p class="m-0" style="color: #666">no fields</p>
           </div>
