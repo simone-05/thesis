@@ -1,4 +1,5 @@
 altro
+prove
 nohup.out
 
 mongo/db
@@ -6,4 +7,9 @@ mongo/input_docs*
 
 ang/grafo1/.BAK.git
 
-grafana/data/*
+grafana/data/alerting
+grafana/data/csv
+grafana/data/plugins
+grafana/data/png
+grafana/data/storage
+grafana/data/grafana.db
