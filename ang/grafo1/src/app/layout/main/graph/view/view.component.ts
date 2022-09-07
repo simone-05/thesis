@@ -1,7 +1,7 @@
 import { Node, Edge, GraphEditingService } from '../graph-editing.service';
 import { Component, OnInit, SimpleChanges, OnDestroy } from '@angular/core';
 import { Subject, Subscription } from 'rxjs';
-import { ClusterNode, DagreClusterLayout } from '@swimlane/ngx-graph';
+import { ClusterNode, DagreClusterLayout, DagreSettings } from '@swimlane/ngx-graph';
 import { ActivatedRoute } from '@angular/router';
 import { FuncManagerService } from 'src/app/shared/services/func-manager.service';
 import { FlowNode } from 'src/app/shared/flow_nodes-interface';
@@ -23,6 +23,7 @@ export class ViewComponent implements OnDestroy, OnInit {
   layout: any;
   graph_id: string = "";
   // layout: any;
+  layoutSettings: DagreSettings = {nodePadding: 120};
 
   // @Input() update: number = 0;
   update$: Subject<boolean> = new Subject();
@@ -74,6 +75,9 @@ export class ViewComponent implements OnDestroy, OnInit {
 
   ngOnInit(): void {
     this.fm.connect();
+    setTimeout(() => {
+      this.zoomToFit$.next();
+    }, 10);
   }
 
   ngOnChanges(changes: SimpleChanges): void {

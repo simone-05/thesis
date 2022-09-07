@@ -1,6 +1,18 @@
 version: "3.8"
 
 services:
+    pymongo:
+        #        image: python:alpine
+        build: ./python_mongo
+        #        command: sh -c "pip install --no-cache-dir pymongo && python3 /home/main.py"
+        entrypoint: python3 /home/main.py
+        volumes:
+          - ./python_mongo:/home
+        profiles:
+            - python_only_run
+        networks:
+            graph_net:
+
     mongo:
         image: mongo
         volumes:
@@ -57,7 +69,7 @@ services:
         ports:
             - 8093:3000
         volumes:
-            - ./grafana:/home/dashboards
+            - ./grafana/data:/var/lib/grafana
         networks:
              graph_net:
 

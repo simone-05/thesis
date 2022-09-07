@@ -1,5 +1,5 @@
 import { GraphEditingService } from '../graph-editing.service';
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit, AfterViewInit, AfterContentInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { FuncManagerService } from 'src/app/shared/services/func-manager.service';
 import { Subscription } from 'rxjs';

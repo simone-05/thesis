@@ -2,7 +2,7 @@ import { GraphEditingService, Node, Edge } from '../../graph-editing.service';
 import { Component, OnInit, SimpleChanges, OnChanges, Input, EventEmitter, Output, AfterViewInit, OnDestroy } from '@angular/core';
 import { Subject, Subscription } from 'rxjs';
 import * as _ from 'lodash';
-import { ClusterNode, DagreClusterLayout } from '@swimlane/ngx-graph';
+import { ClusterNode, DagreClusterLayout, DagreSettings } from '@swimlane/ngx-graph';
 import { FlowNode } from 'src/app/shared/flow_nodes-interface';
 import { FuncManagerService } from 'src/app/shared/services/func-manager.service';
 
@@ -11,7 +11,7 @@ import { FuncManagerService } from 'src/app/shared/services/func-manager.service
   templateUrl: './view-edit.component.html',
   styleUrls: ['./view-edit.component.scss']
 })
-export class ViewEditComponent implements OnDestroy, OnChanges {
+export class ViewEditComponent implements OnDestroy, OnChanges, OnInit {
   nodes: Node[] = [
     // {id: "1", label: 'nodo1', type: "cond"},
     // {id: "2", label: 'nodo2', type: "task"}
@@ -21,6 +21,7 @@ export class ViewEditComponent implements OnDestroy, OnChanges {
   ];
   clusters: ClusterNode[] = [];
   layout: any;
+  layoutSettings: DagreSettings = {nodePadding: 120};
 
   @Input() update: number = 0;
   update$: Subject<boolean> = new Subject();
@@ -55,6 +56,12 @@ export class ViewEditComponent implements OnDestroy, OnChanges {
     this.graphEditingService.getFlowNodes().forEach((node) => {
       this.fm.paintNode(node.id, "default");
     });
+  }
+
+  ngOnInit(): void {
+    setTimeout(() => {
+      this.zoomToFit$.next();
+    }, 10);
   }
 
   ngOnChanges(changes: SimpleChanges): void {

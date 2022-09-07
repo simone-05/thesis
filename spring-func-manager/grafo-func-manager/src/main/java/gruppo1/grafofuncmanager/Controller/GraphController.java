@@ -82,11 +82,11 @@ class GraphController {
         responseWriter.close();
     }
 
-    @RequestMapping(value="/prom_clear")
-    public void prom_metrics_clear() {
-        metrics_registry_test.clear();
-        c_list.clear();
-    }
+    // @RequestMapping(value="/prom_clear")
+    // public void prom_metrics_clear() {
+    //     metrics_registry_test.clear();
+    //     c_list.clear();
+    // }
 
     @RequestMapping(value="/prom_add_counter/{name}")
     public String prom_add_counter(@PathVariable(value="name") String name) {

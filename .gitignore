@@ -5,3 +5,5 @@ mongo/db
 mongo/input_docs*
 
 ang/grafo1/.BAK.git
+
+grafana/data/*

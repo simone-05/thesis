@@ -1,6 +1,6 @@
 <div [ngStyle]="{'height': getContentHeight()}">
   <ngx-graph class="chart-container" [update$]="update$" [center$]="center$" [zoomToFit$]="zoomToFit$"
-    [nodes]="nodes" [links]="edges" [clusters]="clusters" [layout]="layout">
+    [nodes]="nodes" [links]="edges" [clusters]="clusters" [layout]="layout" [layoutSettings]="layoutSettings">
 
     <ng-template #nodeTemplate let-node>
       <svg xmlns="http://www.w3.org/2000/svg" (click)="nodeClick(node)" (mouseenter)="setNodeDetails(node.id)"
