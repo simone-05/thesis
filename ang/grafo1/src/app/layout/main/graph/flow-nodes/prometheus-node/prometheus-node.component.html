@@ -60,12 +60,12 @@
         <label>Histogram start value</label>
       </div>
       <div class="form-floating">
-        <input class="form-control my-2 " type="number" formControlName="node_histo_width" placeholder="Histogram width" [ngClass]="{'is-invalid': !flowNodeForm.controls['node_histo_width'].valid}">
+        <input class="form-control my-2 " type="number" formControlName="node_histo_width" placeholder="Histogram width" [ngClass]="{'is-invalid': !flowNodeForm.controls['node_histo_width'].valid}" ngbPopover="Width of the step, value to add" popoverClass="custom-popover" triggers="mouseenter:mouseleave" [openDelay]="400">
         <p class="text-danger text-start my-0" *ngIf="flowNodeForm.controls['node_histo_width'].errors">{{flowNodeForm.controls['node_histo_width'].errors?.['msg']}}</p>
         <label>Histogram width</label>
       </div>
       <div class="form-floating">
-        <input class="form-control my-2 " type="number" formControlName="node_histo_count" placeholder="Histogram count" [ngClass]="{'is-invalid': !flowNodeForm.controls['node_histo_count'].valid}">
+        <input class="form-control my-2 " type="number" formControlName="node_histo_count" placeholder="Histogram count" [ngClass]="{'is-invalid': !flowNodeForm.controls['node_histo_count'].valid}" ngbPopover="Number of steps, value to multiplicate, the end value is width * count" popoverClass="custom-popover" triggers="mouseenter:mouseleave" [openDelay]="400">
         <p class="text-danger text-start my-0" *ngIf="flowNodeForm.controls['node_histo_count'].errors">{{flowNodeForm.controls['node_histo_count'].errors?.['msg']}}</p>
         <label>Histogram count</label>
       </div>

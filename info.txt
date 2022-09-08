@@ -1,6 +1,12 @@
-Per avviare usa 'docker-compose up -d'
+Per avviare usa "start.sh"
 
 Se faccio modifiche e voglio aggiornare i servizi in springboot, prima costruisco il loro eseguibile nelle rispettive cartelle, con ./mvnw clean package -DskipTests, dopodichè dico a docker di rebuildare le loro immagini, con 'docker-compose build <servizio>' e poi 'docker-compose restart <servizio>'
 Oppure restarto tutto aggiungendo --build: 'docker-compose up --build -d <servizio>'
 
 Per rebuildare angular, devo fare 'ng build' nella root del progetto. Non ha immagine docker, ma volume quindi lo prende aggiornato in automatico.
+
+
+Per aggiungere documenti a run-time con cui aggiornare le metriche, uso "start_pymongo.sh", immettendo i giusti valori di device_id e nome metrica. Facendo attenzione che il database e la collection usate nello script siano le stesse che importiamo nel grafo di flusso
+
+Devo importare la dashboard di grafana, situata in ./grafana/dash1...
+

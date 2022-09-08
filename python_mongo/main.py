@@ -18,8 +18,19 @@ while 1:
     metrics = []
     while add == 'y':
         metric_name = input("metric name: ")
-        metric_value = float(input("metric value (float): "))
-        metrics.append({"name": metric_name, "float_value": metric_value})
+        val_type = 0
+        while val_type not in [1,2,3]:
+            val_type = int(input("metric type? \t1.float 2.int 3.long\n>"))
+        if (val_type == 1) :
+            val_type = "float"
+            metric_value = float(input("metric value: "))
+        if (val_type == 2) :
+            val_type = "int"
+            metric_value = int(input("metric value: "))
+        if (val_type == 3) :
+            val_type = "long"
+            metric_value = input("metric value: ")
+        metrics.append({"name": metric_name, val_type+"_value": metric_value})
         add = input("Add another metric? y/n\n>")
         while (add != 'y' and add !='n'):
             add = input("\ty/n ?\n>")

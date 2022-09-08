@@ -35,7 +35,7 @@ export class EditComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    // this.switcher(1);
+    // this.switcher(1);z
     this.fm.connect();
   }
 
