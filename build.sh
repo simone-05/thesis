@@ -1,5 +1,8 @@
 #!/bin/bash
-cd ./ang/grafo1 && ng b
+chown -R $USER ./grafana/data
+chmod -R 777 ./grafana/data
+
+cd ./ang/grafo1 && npm install && ng b
 
 cd ../../spring-db/grafo && \
     ./mvnw package -DskipTests
