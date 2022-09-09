@@ -1,4 +1,47 @@
 {
+  "__inputs": [
+    {
+      "name": "DS_PROMETHEUS",
+      "label": "Prometheus",
+      "description": "",
+      "type": "datasource",
+      "pluginId": "prometheus",
+      "pluginName": "Prometheus"
+    }
+  ],
+  "__elements": [],
+  "__requires": [
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "8.5.1"
+    },
+    {
+      "type": "panel",
+      "id": "histogram",
+      "name": "Histogram",
+      "version": ""
+    },
+    {
+      "type": "datasource",
+      "id": "prometheus",
+      "name": "Prometheus",
+      "version": "1.0.0"
+    },
+    {
+      "type": "panel",
+      "id": "stat",
+      "name": "Stat",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "timeseries",
+      "name": "Time series",
+      "version": ""
+    }
+  ],
   "annotations": {
     "list": [
       {
@@ -24,14 +67,14 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 4,
+  "id": null,
   "links": [],
   "liveNow": false,
   "panels": [
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "ZzF-5vG4k"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -89,7 +132,7 @@
         "x": 0,
         "y": 0
       },
-      "id": 4,
+      "id": 2,
       "options": {
         "legend": {
           "calcs": [],
@@ -105,7 +148,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "ZzF-5vG4k"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "BL0010_temperature_value_gauge",
           "refId": "A"
@@ -117,7 +160,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "ZzF-5vG4k"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -149,32 +192,7 @@
             ]
           }
         },
-        "overrides": [
-          {
-            "__systemRef": "hideSeriesFrom",
-            "matcher": {
-              "id": "byNames",
-              "options": {
-                "mode": "exclude",
-                "names": [
-                  "BL0010_humidity_value_histogram_bucket{instance=\"graphmanager:8081\", job=\"java_spring_func_manager\", le=\"50.0\"}"
-                ],
-                "prefix": "All except:",
-                "readOnly": true
-              }
-            },
-            "properties": [
-              {
-                "id": "custom.hideFrom",
-                "value": {
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": true
-                }
-              }
-            ]
-          }
-        ]
+        "overrides": []
       },
       "gridPos": {
         "h": 8,
@@ -182,7 +200,7 @@
         "x": 12,
         "y": 0
       },
-      "id": 2,
+      "id": 6,
       "options": {
         "bucketOffset": 0,
         "legend": {
@@ -191,24 +209,23 @@
           "placement": "bottom"
         }
       },
-      "pluginVersion": "8.5.1",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "ZzF-5vG4k"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "BL0010_humidity_value_histogram_bucket",
           "refId": "A"
         }
       ],
-      "title": "BL0010 humidity value",
+      "title": "BL0010 humidity",
       "type": "histogram"
     },
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "ZzF-5vG4k"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -217,7 +234,7 @@
           },
           "mappings": [],
           "thresholds": {
-            "mode": "percentage",
+            "mode": "absolute",
             "steps": [
               {
                 "color": "green",
@@ -229,12 +246,12 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 8,
+        "h": 7,
         "w": 12,
         "x": 0,
         "y": 8
       },
-      "id": 6,
+      "id": 4,
       "options": {
         "colorMode": "value",
         "graphMode": "area",
@@ -254,7 +271,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "ZzF-5vG4k"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "BL0010_max_delay_gauge",
           "refId": "A"
@@ -266,7 +283,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "ZzF-5vG4k"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -319,7 +336,7 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 8,
+        "h": 7,
         "w": 12,
         "x": 12,
         "y": 8
@@ -340,7 +357,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "ZzF-5vG4k"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "BL0010_average_delay_summary",
           "refId": "A"
@@ -358,13 +375,13 @@
     "list": []
   },
   "time": {
-    "from": "now-15m",
+    "from": "now-6h",
     "to": "now"
   },
   "timepicker": {},
   "timezone": "",
   "title": "dash1",
-  "uid": "8-oUWJG4z",
+  "uid": "CG3QdfM4k",
   "version": 2,
   "weekStart": ""
 }
