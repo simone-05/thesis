@@ -3,7 +3,9 @@ prove
 nohup.out
 
 mongo/db
-mongo/input_docs*
+mongo/input_docs-archives/device_alarm*
+mongo/input_docs-archives/device_diag*
+mongo/input_docs-archives/operationData*
 
 ang/grafo1/.BAK.git
 

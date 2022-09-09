@@ -1,0 +1,1 @@
+{"options":{},"indexes":[{"v":2,"key":{"_id":1},"name":"_id_","ns":"iot.device_measure"},{"v":2,"key":{"device_id":1,"device_timestamp":1},"name":"device_id_1_device_timestamp_1","ns":"iot.device_measure"}],"uuid":"25478e9bb607416d817d1b2dd0fa1a9d"}
