@@ -10,3 +10,5 @@ Per aggiungere documenti a run-time con cui aggiornare le metriche, uso "start_p
 
 Devo importare la dashboard di grafana, situata in ./grafana/dash1...
 
+Per importare collection esempio in mongo (quelle contenenti i dati da operare e il grafo di flusso stesso):
+mongorestore -d <nome_database_destinazione> -c <nome_collection> path/to/<file>.bson
