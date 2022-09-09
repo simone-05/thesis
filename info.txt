@@ -1,14 +1,9 @@
-Per avviare usa "start.sh"
-
-Se faccio modifiche e voglio aggiornare i servizi in springboot, prima costruisco il loro eseguibile nelle rispettive cartelle, con ./mvnw clean package -DskipTests, dopodichè dico a docker di rebuildare le loro immagini, con 'docker-compose build <servizio>' e poi 'docker-compose restart <servizio>'
-Oppure restarto tutto aggiungendo --build: 'docker-compose up --build -d <servizio>'
-
-Per rebuildare angular, devo fare 'ng build' nella root del progetto. Non ha immagine docker, ma volume quindi lo prende aggiornato in automatico.
+Dopo un git clone di questa repo,
+Prima di avviarla, runnare "build.sh"
+Dopodichè è possibile avviarla con "start.sh"
 
 
-Per aggiungere documenti a run-time con cui aggiornare le metriche, uso "start_pymongo.sh", immettendo i giusti valori di device_id e nome metrica. Facendo attenzione che il database e la collection usate nello script siano le stesse che importiamo nel grafo di flusso
+Per aggiungere documenti a run-time con cui aggiornare le metriche, uso "start_pymongo.sh", immettendo i giusti valori di device_id e nome metrica. Facendo attenzione che il database e la collection usate nello script siano le stesse che importiamo nel grafo di flusso (di default sono db: iot e collection: test)
 
-Devo importare la dashboard di grafana, situata in ./grafana/dash1...
-
-Per importare collection esempio in mongo (quelle contenenti i dati da operare e il grafo di flusso stesso):
-mongorestore -d <nome_database_destinazione> -c <nome_collection> path/to/<file>.bson
+Per grafana devo aggiungere prometheus come sorgente dati "http://prom:9090", poi
+devo importare la dashboard di grafana, situata in ./grafana/dash1...
