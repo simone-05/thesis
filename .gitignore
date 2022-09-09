@@ -6,6 +6,7 @@ mongo/db
 mongo/input_docs-archives/device_alarm*
 mongo/input_docs-archives/device_diag*
 mongo/input_docs-archives/operationData*
+mongo/input_docs-archives/device_measure.*
 
 ang/grafo1/.BAK.git
 
